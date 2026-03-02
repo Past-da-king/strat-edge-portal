@@ -1,0 +1,115 @@
+ncaught ReferenceError: useMemo is not defined
+    at Monitoring (Monitoring.tsx?t=1772455526065:54:17)
+Monitoring.tsx?t=1772455526065:54 Uncaught ReferenceError: useMemo is not defined
+    at Monitoring (Monitoring.tsx?t=1772455526065:54:17)
+
+installHook.js:1 The above error occurred in the <Monitoring> component:
+
+    at Monitoring (http://localhost:3000/src/pages/Monitoring.tsx?t=1772455526065:38:27)
+    at div
+    at main
+    at div
+    at DashboardLayout (http://localhost:3000/src/components/DashboardLayout.tsx?t=1772454532697:51:35)
+    at PrivateRoute (http://localhost:3000/src/App.tsx?t=1772455526065:31:25)
+    at RenderedRoute (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=5564dda2:4131:5)
+    at Routes (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=5564dda2:4601:5)
+    at Router (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=5564dda2:4544:15)
+    at BrowserRouter (http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=5564dda2:5290:5)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+chunk-NUMECXU6.js?v=5564dda2:19413 Uncaught ReferenceError: useMemo is not defined
+    at Monitoring (Monitoring.tsx?t=1772455526065:54:17)
+:3000/api/auth/audit-logs:1 
+ Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+installHook.js:1 AxiosError: Request failed with status code 500
+    at async fetchLogs (Monitoring.tsx:37:21)
+:3000/api/auth/audit-logs:1 
+ Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+installHook.js:1 AxiosError: Request failed with status code 500
+    at async fetchLogs (Monitoring.tsx:37:21)
+:3000/api/repository/1/risk-proofs:1 
+ Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+installHook.js:1 AxiosError: Request failed with status code 500
+    at async fetchRepo (Repository.tsx?t=1772455082574:57:23)
+:3000/api/reports/1:1 
+ Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+installHook.js:1 Failed to download report AxiosError: Request failed with status code 500
+    at async handleDownloadReport (Overview.tsx:41:24)
+:3000/api/reports/1:1 
+ Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+installHook.js:1 Failed to download report AxiosError: Request failed with status code 500
+    at async handleDownloadReport (Overview.tsx:41:24)
+:3000/api/reports/1:1 
+ Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+installHook.js:1 Failed to download report AxiosError: Request failed with status code 500
+    at async handleDownloadReport (Overview.tsx:41:24)
+:3000/api/reports/1:1 
+ Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+installHook.js:1 Failed to download report AxiosError: Request failed with status code 500
+    at async handleDownloadReport (Overview.tsx:41:24)
+:8000/projects/1/task-burndown:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+installHook.js:1 Failed to fetch project details AxiosError: Request failed with status code 404
+    at async Object.getTaskBurndownData (projectService.ts:33:20)
+    at async Promise.all (index 3)
+    at async fetchData (ProjectDetail.tsx:50:77)
+:8000/projects/1/summary:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+:8000/projects/1/task-burndown:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+installHook.js:1 Failed to fetch project details AxiosError: Request failed with status code 404
+    at async Object.getTaskBurndownData (projectService.ts:33:20)
+    at async Promise.all (index 3)
+    at async fetchData (ProjectDetail.tsx:50:77)
+:8000/projects/1/summary:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+:8000/projects/1/task-burndown:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+installHook.js:1 Failed to fetch project details AxiosError: Request failed with status code 404
+    at async Object.getTaskBurndownData (projectService.ts:33:20)
+    at async Promise.all (index 3)
+    at async fetchData (ProjectDetail.tsx:50:77)
+:8000/projects/1/summary:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+:8000/projects/1/task-burndown:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+installHook.js:1 Failed to fetch project details AxiosError: Request failed with status code 404
+    at async Object.getTaskBurndownData (projectService.ts:33:20)
+    at async Promise.all (index 3)
+    at async fetchData (ProjectDetail.tsx:50:77)
+:8000/projects/1/summary:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+:8000/projects/1/task-burndown:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+installHook.js:1 Failed to fetch project details AxiosError: Request failed with status code 404
+    at async Object.getTaskBurndownData (projectService.ts:33:20)
+    at async Promise.all (index 3)
+    at async fetchData (ProjectDetail.tsx:50:77)
+:8000/projects/1/summary:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+:8000/projects/1/task-burndown:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+installHook.js:1 Failed to fetch project details AxiosError: Request failed with status code 404
+    at async Object.getTaskBurndownData (projectService.ts:33:20)
+    at async Promise.all (index 3)
+    at async fetchData (ProjectDetail.tsx:50:77)
+:8000/projects/1/summary:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+:8000/projects/1/task-burndown:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+installHook.js:1 Failed to fetch project details AxiosError: Request failed with status code 404
+    at async Object.getTaskBurndownData (projectService.ts:33:20)
+    at async Promise.all (index 3)
+    at async fetchData (ProjectDetail.tsx:50:77)
+:8000/projects/1/summary:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+:8000/projects/1/task-burndown:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+installHook.js:1 Failed to fetch project details AxiosError: Request failed with status code 404
+    at async Object.getTaskBurndownData (projectService.ts:33:20)
+    at async Promise.all (index 3)
+    at async fetchData (ProjectDetail.tsx:50:77)
+:8000/projects/1/summary:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
