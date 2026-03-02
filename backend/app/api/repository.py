@@ -26,6 +26,7 @@ def list_project_files(
     query = text("""
         SELECT 
             o.output_id,
+            o.activity_id,
             o.file_name,
             o.file_path,
             o.doc_type,
@@ -54,6 +55,7 @@ def list_all_files(
     query = text("""
         SELECT 
             o.output_id,
+            o.activity_id,
             o.file_name,
             o.file_path,
             o.doc_type,
@@ -65,7 +67,7 @@ def list_all_files(
         JOIN users u ON o.uploaded_by = u.user_id
         ORDER BY o.uploaded_at DESC
         LIMIT 100
-        """)
+    """)
     
     results = db.execute(query).fetchall()
     return [dict(r._mapping) for r in results]
