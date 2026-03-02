@@ -16,6 +16,7 @@ import {
   Activity,
   Fingerprint
 } from 'lucide-react';
+import api from '../services/api';
 import projectService from '../services/projectService';
 import authService from '../services/authService';
 import { Modal } from '../components/Modal';

@@ -87,10 +87,10 @@ export const ProjectDetail: React.FC = () => {
         projectService.getProjectMetrics(projectId),
         projectService.getBurndownData(projectId),
         projectService.getTaskBurndownData(projectId),
-        api.get(`/projects/${projectId}/spending-breakdown/`),
-        api.get(`/tasks/project/${projectId}/`),
-        api.get(`/risks/`),
-        api.get(`/repository/project/${projectId}/`),
+        api.get(`projects/${projectId}/spending-breakdown/`),
+        api.get(`tasks/project/${projectId}/`),
+        api.get(`risks/`),
+        api.get(`repository/project/${projectId}/`),
         projectService.getProjects()
       ]);
       
@@ -125,7 +125,7 @@ export const ProjectDetail: React.FC = () => {
 
   const handleDownloadFile = async (fileId: number, fileName: string) => {
     try {
-      const res = await api.get(`/tasks/output/${fileId}/blob/`);
+      const res = await api.get(`tasks/output/${fileId}/blob/`);
       alert(`Initiating secure download for: ${fileName}`);
     } catch (err) {
       console.error(err);

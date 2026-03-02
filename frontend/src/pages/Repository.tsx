@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { DenseTable, DenseRow, DenseCell } from '../components/DenseTable';
 import projectService from '../services/projectService';
-import axios from 'axios';
+import api from '../services/api';
 
 export const Repository: React.FC = () => {
   const [projects, setProjects] = useState<any[]>([]);
@@ -20,10 +20,6 @@ export const Repository: React.FC = () => {
   const [files, setFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-
-  const getAuthHeader = () => ({ 
-    headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem('user') || '{}').access_token}` } 
-  });
 
   useEffect(() => {
     const fetchInitial = async () => {
@@ -43,9 +39,9 @@ export const Repository: React.FC = () => {
     const fetchFiles = async () => {
       try {
         const url = selectedProjectId === 'all' 
-          ? '/api/repository/all' 
-          : `/api/repository/project/${selectedProjectId}`;
-        const res = await axios.get(url, getAuthHeader());
+          ? '/repository/all/' 
+          : `/repository/project/${selectedProjectId}/`;
+        const res = await api.get(url);
         setFiles(res.data);
       } catch (err) {
         console.error(err);
@@ -56,7 +52,7 @@ export const Repository: React.FC = () => {
 
   const handleDownload = async (fileId: number, fileName: string) => {
     try {
-      const res = await axios.get(`/api/tasks/output/${fileId}/blob`, getAuthHeader());
+      const res = await api.get(`/tasks/output/${fileId}/blob/`);
       // In a real app, this would use the returned blob path/SAS URL
       alert(`Download sequence initiated for: ${fileName}`);
     } catch (err) {

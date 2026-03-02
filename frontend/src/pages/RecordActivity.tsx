@@ -39,7 +39,7 @@ export const RecordActivity: React.FC = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const res = await api.get('/projects/');
+        const res = await api.get('projects/');
         setProjects(res.data);
         if (res.data.length > 0) setSelectedProjectId(res.data[0].project_id);
       } catch (err) {
@@ -56,8 +56,8 @@ export const RecordActivity: React.FC = () => {
       const fetchActivities = async () => {
         try {
           const [actRes, diagRes] = await Promise.all([
-            api.get(`/tasks/project/${selectedProjectId}/`),
-            api.get(`/projects/${selectedProjectId}/network-diagram/`)
+            api.get(`tasks/project/${selectedProjectId}/`),
+            api.get(`projects/${selectedProjectId}/network-diagram/`)
           ]);
           setActivities(actRes.data);
           setDiagramData(diagRes.data);
@@ -259,7 +259,7 @@ export const RecordActivity: React.FC = () => {
           onSuccess={() => {
             setUploadModal({ isOpen: false, activityId: null, docType: '' });
             if (selectedProjectId) {
-              api.get(`/tasks/project/${selectedProjectId}/`).then(res => setActivities(res.data));
+              api.get(`tasks/project/${selectedProjectId}/`).then(res => setActivities(res.data));
             }
           }}
           activityId={uploadModal.activityId!}
@@ -287,7 +287,7 @@ const FileUploadZone: React.FC<{ activityId: number; docType: string; onSuccess:
         const formData = new FormData();
         formData.append('file', file);
         
-        await api.post(`/tasks/${activityId}/upload/?doc_type=${docType}`, formData, {
+        await api.post(`tasks/${activityId}/upload/?doc_type=${docType}`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }

@@ -9,7 +9,7 @@ import {
   Tag,
   Hash
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../services/api';
 import { DenseTable, DenseRow, DenseCell } from '../components/DenseTable';
 import { CustomSelect } from '../components/CustomSelect';
 
@@ -31,14 +31,10 @@ export const RecordExpenditure: React.FC = () => {
     activity_id: '' as string | number
   });
 
-  const getAuthHeader = () => ({ 
-    headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem('user') || '{}').access_token}` } 
-  });
-
   useEffect(() => {
     const fetchInitial = async () => {
       try {
-        const res = await axios.get('/api/projects', getAuthHeader());
+        const res = await api.get('/projects/');
         setProjects(res.data);
         if (res.data.length > 0) setSelectedProjectId(res.data[0].project_id);
       } catch (err) {
@@ -55,8 +51,8 @@ export const RecordExpenditure: React.FC = () => {
       const fetchRelated = async () => {
         try {
           const [actRes, expRes] = await Promise.all([
-            axios.get(`/api/tasks/project/${selectedProjectId}`, getAuthHeader()),
-            axios.get(`/api/expenditures/project/${selectedProjectId}`, getAuthHeader())
+            api.get(`/tasks/project/${selectedProjectId}/`),
+            api.get(`/expenditures/project/${selectedProjectId}/`)
           ]);
           setActivities(actRes.data);
           setExpenditures(expRes.data);
@@ -77,11 +73,11 @@ export const RecordExpenditure: React.FC = () => {
         project_id: selectedProjectId,
         activity_id: formData.activity_id === '' ? null : Number(formData.activity_id)
       };
-      await axios.post('/api/expenditures/', payload, getAuthHeader());
+      await api.post('/expenditures/', payload);
       setSuccess('Expenditure logged successfully!');
       setFormData({ ...formData, amount: 0, reference_id: '', description: '', activity_id: '' });
       // Refresh history
-      const expRes = await axios.get(`/api/expenditures/project/${selectedProjectId}`, getAuthHeader());
+      const expRes = await api.get(`/expenditures/project/${selectedProjectId}/`);
       setExpenditures(expRes.data);
     } catch (err) {
       console.error(err);
@@ -110,7 +106,6 @@ export const RecordExpenditure: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Entry Form */}
         <div className="lg:col-span-1 space-y-6">
           <div className="glass rounded-3xl p-8 border-l-4 border-l-emerald-500">
             <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
@@ -194,7 +189,6 @@ export const RecordExpenditure: React.FC = () => {
           </div>
         </div>
 
-        {/* Transaction History */}
         <div className="lg:col-span-2 space-y-6">
           <div className="glass rounded-[2rem] p-10 border border-white/5">
             <h3 className="text-lg font-black text-white mb-8 flex items-center gap-3 uppercase tracking-widest opacity-50 text-xs">

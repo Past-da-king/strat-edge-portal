@@ -11,7 +11,7 @@ import {
   Upload,
   FileText
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../services/api';
 import riskService from '../services/riskService';
 import { DenseTable, DenseRow, DenseCell } from '../components/DenseTable';
 import { Modal } from '../components/Modal';
@@ -29,15 +29,11 @@ export const Risks: React.FC = () => {
     description: ''
   });
 
-  const getAuthHeader = () => ({ 
-    headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem('user') || '{}').access_token}` } 
-  });
-
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [projRes, riskRes] = await Promise.all([
-          axios.get('/api/projects/', getAuthHeader()),
+          api.get('/projects/'),
           riskService.getRisks()
         ]);
         setProjects(projRes.data);
@@ -182,9 +178,7 @@ const AddRiskForm: React.FC<{ projects: any[]; onSuccess: () => void }> = ({ pro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('/api/risks/', formData, {
-        headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem('user') || '{}').access_token}` }
-      });
+      await api.post('/risks/', formData);
       onSuccess();
     } catch (err) {
       console.error(err);
@@ -201,19 +195,19 @@ const AddRiskForm: React.FC<{ projects: any[]; onSuccess: () => void }> = ({ pro
       />
       
       <div>
-        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 px-1">Risk Description *</label>
+        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 px-1">Risk Description *</label>
         <input 
           type="text" 
           value={formData.description}
           onChange={e => setFormData({...formData, description: e.target.value})}
-          className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-4 text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all font-bold" 
+          className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-4 text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all font-bold text-sm" 
           placeholder="e.g. DELAY IN MATERIALS..."
           required 
         />
       </div>
 
       <div>
-        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 px-1">Severity Impact</label>
+        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 px-1">Severity Impact</label>
         <div className="flex gap-3">
           {['L', 'M', 'H'].map(level => (
             <button
@@ -233,7 +227,7 @@ const AddRiskForm: React.FC<{ projects: any[]; onSuccess: () => void }> = ({ pro
       </div>
 
       <div>
-        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 px-1">Mitigation Plan</label>
+        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2 px-1">Mitigation Plan</label>
         <textarea 
           value={formData.mitigation_action}
           onChange={e => setFormData({...formData, mitigation_action: e.target.value})}

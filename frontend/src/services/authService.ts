@@ -8,6 +8,7 @@ export const login = async (username, password) => {
   formData.append('username', username);
   formData.append('password', password);
 
+  // Still absolute because it doesn't use the 'api' instance
   const response = await axios.post(`/api/auth/login/`, formData);
   if (response.data.access_token) {
     localStorage.setItem('user', JSON.stringify(response.data));
@@ -28,17 +29,17 @@ export const getCurrentUser = () => {
 };
 
 export const getUsers = async () => {
-  const response = await api.get(`/auth/users/`);
+  const response = await api.get(`auth/users/`);
   return response.data;
 };
 
 export const updateUserStatus = async (userId: number, status: string) => {
-  const response = await api.put(`/auth/users/${userId}/status/`, { status });
+  const response = await api.put(`auth/users/${userId}/status/`, { status });
   return response.data;
 };
 
 export const createUser = async (userData: any) => {
-  const response = await api.post(`/auth/users/`, userData);
+  const response = await api.post(`auth/users/`, userData);
   return response.data;
 };
 

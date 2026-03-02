@@ -77,7 +77,7 @@ export const ProjectSetup: React.FC = () => {
   const fetchPlan = async (projectId: number) => {
     setIsPlanLoading(true);
     try {
-      const res = await api.get(`/tasks/project/${projectId}/`);
+      const res = await api.get(`tasks/project/${projectId}/`);
       setPlanTasks(res.data);
     } catch (err) {
       console.error(err);
@@ -134,7 +134,7 @@ export const ProjectSetup: React.FC = () => {
 
     if (window.confirm('Delete this activity permanently?')) {
       try {
-        await api.delete(`/tasks/${taskId}/`);
+        await api.delete(`tasks/${taskId}/`);
         const updated = [...planTasks];
         updated.splice(index, 1);
         setPlanTasks(updated);
@@ -153,9 +153,9 @@ export const ProjectSetup: React.FC = () => {
         if (isNew) delete payload.activity_id;
 
         if (isNew) {
-          await api.post('/tasks/', payload);
+          await api.post('tasks/', payload);
         } else {
-          await api.put(`/tasks/${task.activity_id}/`, payload);
+          await api.put(`tasks/${task.activity_id}/`, payload);
         }
       }
       setSuccess('Project plan synchronized successfully!');
@@ -282,11 +282,11 @@ export const ProjectSetup: React.FC = () => {
               </div>
             </div>
 
-            <div className="border border-white/5 rounded-2xl overflow-hidden bg-black/20">
+            <div className="border border-white/5 rounded-2xl bg-black/20">
               {isPlanLoading ? (
                 <div className="py-40 text-center"><Loader2 className="w-12 h-12 text-accent-primary animate-spin mx-auto opacity-20" /></div>
               ) : (
-                <div className="overflow-x-auto custom-scrollbar">
+                <div className="overflow-x-auto custom-scrollbar min-h-[400px]">
                   <table className="w-full text-left border-collapse">
                     <thead className="bg-white/5">
                       <tr>
@@ -311,15 +311,16 @@ export const ProjectSetup: React.FC = () => {
                               placeholder="Phase title..."
                             />
                           </td>
-                          <td className="p-2">
-                            <select 
-                              value={task.responsible_user_id || ''} 
-                              onChange={e => handleUpdateTaskField(idx, 'responsible_user_id', e.target.value === '' ? null : Number(e.target.value))}
-                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-accent-primary/50 rounded px-2 py-2 text-xs text-slate-400"
-                            >
-                              <option value="">Unassigned</option>
-                              {users.map(u => <option key={u.user_id} value={u.user_id}>{u.full_name}</option>)}
-                            </select>
+                          <td className="p-2 w-48">
+                            <CustomSelect
+                              value={task.responsible_user_id || ''}
+                              onChange={val => handleUpdateTaskField(idx, 'responsible_user_id', val === '' ? null : Number(val))}
+                              options={[
+                                { value: '', label: 'Unassigned' },
+                                ...users.map(u => ({ value: u.user_id, label: u.full_name }))
+                              ]}
+                              placeholder="Unassigned"
+                            />
                           </td>
                           <td className="p-2">
                             <input 
@@ -342,26 +343,23 @@ export const ProjectSetup: React.FC = () => {
                               className="w-full bg-transparent border-0 focus:ring-1 focus:ring-accent-primary/50 rounded px-2 py-2 text-sm text-white font-mono font-bold" 
                             />
                           </td>
-                          <td className="p-2 w-48">
-                            <select 
-                              value={task.depends_on || ''} 
-                              onChange={e => handleUpdateTaskField(idx, 'depends_on', e.target.value === '' ? null : Number(e.target.value))}
-                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-accent-primary/50 rounded px-2 py-2 text-[10px] text-slate-500 uppercase font-black"
-                            >
-                              <option value="">None</option>
-                              {planTasks.filter(t => t.activity_id !== task.activity_id && !String(t.activity_id).startsWith('temp-')).map(t => (
-                                <option key={t.activity_id} value={t.activity_id}>{t.activity_name}</option>
-                              ))}
-                            </select>
+                          <td className="p-2 w-56">
+                            <CustomSelect
+                              value={task.depends_on || ''}
+                              onChange={val => handleUpdateTaskField(idx, 'depends_on', val === '' ? null : Number(val))}
+                              options={[
+                                { value: '', label: 'None' },
+                                ...planTasks.filter(t => t.activity_id !== task.activity_id && !String(t.activity_id).startsWith('temp-')).map(t => ({ value: t.activity_id, label: t.activity_name }))
+                              ]}
+                              placeholder="None"
+                            />
                           </td>
-                          <td className="p-2">
-                            <select 
-                              value={task.status} 
-                              onChange={e => handleUpdateTaskField(idx, 'status', e.target.value)}
-                              className={`w-full bg-transparent border-0 focus:ring-1 focus:ring-accent-primary/50 rounded px-2 py-2 text-[10px] font-black uppercase ${task.status === 'Complete' ? 'text-emerald-500' : task.status === 'Active' ? 'text-amber-500' : 'text-slate-600'}`}
-                            >
-                              {['Not Started', 'Active', 'Complete'].map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
+                          <td className="p-2 w-40">
+                            <CustomSelect
+                              value={task.status}
+                              onChange={val => handleUpdateTaskField(idx, 'status', val)}
+                              options={['Not Started', 'Active', 'Complete'].map(s => ({ value: s, label: s }))}
+                            />
                           </td>
                           <td className="p-2 text-right">
                             <button onClick={() => handleRemoveTask(task.activity_id, idx)} className="p-2 text-slate-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
