@@ -1,5 +1,5 @@
 services:
-  # 1. Backend (FastAPI)
+  # 1. Backend (FastAPI Web Service)
   - type: web
     name: strat-edge-api
     env: python
@@ -19,11 +19,12 @@ services:
       - key: GOOGLE_APPLICATION_CREDENTIALS
         value: /etc/secrets/gcp-credentials.json
 
-  # 2. Frontend (React)
+  # 2. Frontend (React Static Site)
+  # NOTE: In Render blueprints, 'type: web' with 'env: static' is a static site.
+  # Static sites are always free and MUST NOT have a 'plan' field.
   - type: web
     name: strat-edge-portal
     env: static
-    plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     rootDir: frontend
