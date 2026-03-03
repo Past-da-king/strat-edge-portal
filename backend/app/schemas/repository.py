@@ -50,6 +50,7 @@ class RepositoryLink(RepositoryLinkBase):
 
 class FileRecord(BaseModel):
     output_id: int
+    activity_id: int
     file_name: str
     file_path: str
     doc_type: str

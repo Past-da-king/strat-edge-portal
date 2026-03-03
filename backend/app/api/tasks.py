@@ -104,16 +104,21 @@ def get_output_blob_info(
     if not output:
         raise HTTPException(status_code=404, detail="Output not found")
     
+    # Generate signed URL
+    signed_url = StorageService.get_signed_url(output.file_path)
+    
     from ..core.audit import log_event
     log_event(
         db,
         event_type="DOWNLOAD",
         category="FILE",
-        description=f"Downloaded file: {output.file_name}",
+        description=f"Generated signed URL for: {output.file_name}",
         user_id=current_user.user_id
     )
     
-    return {"file_name": output.file_name, "blob_path": output.file_path}
+    return {"file_name": output.file_name, "signed_url": signed_url}
+
+from ..services.storage_service import StorageService
 
 @router.post("/{task_id}/upload/")
 async def upload_task_output(
@@ -127,12 +132,20 @@ async def upload_task_output(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    blob_path = f"uploads/tasks/{task_id}/{file.filename}"
+    # Path inside the bucket
+    gcs_path = f"projects/{task.project_id}/tasks/{task_id}/{file.filename}"
+    
+    content = await file.read()
+    StorageService.upload_file(
+        file_content=content,
+        destination_path=gcs_path,
+        content_type=file.content_type
+    )
     
     db_output = TaskOutput(
         activity_id=task_id,
         file_name=file.filename,
-        file_path=blob_path,
+        file_path=gcs_path,
         doc_type=doc_type,
         uploaded_by=current_user.user_id
     )

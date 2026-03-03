@@ -62,7 +62,7 @@ class RepositoryFile(Base):
     parent_id = Column(Integer, ForeignKey("repository_files.file_id"), nullable=True)
     name = Column(String, nullable=False)
     is_folder = Column(Integer, default=0) # 0 for file, 1 for folder
-    file_path = Column(String) # Azure Blob Path
+    file_path = Column(String) # GCS Path
     uploaded_by = Column(Integer, ForeignKey("users.user_id"))
     created_at = Column(DateTime, server_default=func.now())
 
@@ -104,7 +104,7 @@ class TaskOutput(Base):
     output_id = Column(Integer, primary_key=True, index=True)
     activity_id = Column(Integer, ForeignKey("baseline_schedule.activity_id"))
     file_name = Column(String, nullable=False)
-    file_path = Column(String, nullable=False) # Azure Blob Path
+    file_path = Column(String, nullable=False) # GCS Path
     uploaded_by = Column(Integer, ForeignKey("users.user_id"))
     uploaded_at = Column(DateTime, server_default=func.now())
     doc_type = Column(String, default="Draft")

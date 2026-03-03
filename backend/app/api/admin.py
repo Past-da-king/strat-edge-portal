@@ -160,7 +160,7 @@ def create_backup(
     current_user: User = Depends(get_current_active_admin)
 ):
     """
-    Generates a full system backup (Database + Azure Blobs - placeholder).
+    Generates a full system backup (Database + GCS Objects - placeholder).
     Returns a zip file.
     """
     zip_buffer = io.BytesIO()

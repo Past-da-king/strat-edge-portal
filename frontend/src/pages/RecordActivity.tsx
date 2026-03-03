@@ -32,6 +32,8 @@ import { useDropzone } from 'react-dropzone';
 import { NetworkDiagram } from '../components/NetworkDiagram';
 import { CustomSelect } from '../components/CustomSelect';
 
+import { FileUploadZone } from '../components/FileUploadZone';
+
 export const RecordActivity: React.FC = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -105,7 +107,10 @@ export const RecordActivity: React.FC = () => {
   const handleDownloadFile = async (fileId: number, fileName: string) => {
     try {
       const res = await api.get(`tasks/output/${fileId}/blob/`);
-      alert(`Initiating secure download for: ${fileName}`);
+      const { signed_url } = res.data;
+      if (signed_url) {
+        window.open(signed_url, '_blank');
+      }
     } catch (err) {
       console.error(err);
     }
@@ -345,143 +350,17 @@ export const RecordActivity: React.FC = () => {
 
       {/* --- FULLSCREEN SUBMISSION TERMINAL --- */}
       {uploadModal.isOpen && (
-        <div className="fixed inset-0 z-[9999] bg-[#0a0a0c] flex flex-col animate-in fade-in duration-300">
-          {/* Top Bar */}
-          <div className="flex items-center justify-between px-10 py-8 border-b border-white/5">
-            <div className="flex items-center gap-5">
-              <div className="w-14 h-14 bg-accent-primary/10 rounded-2xl flex items-center justify-center border border-accent-primary/20 shadow-2xl">
-                <ShieldCheck className="w-7 h-7 text-accent-primary" />
-              </div>
-              <div>
-                <h2 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">Submission Terminal</h2>
-                <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.4em] mt-2">Strat Edge Secure Deliverable Pipeline • Node Establish</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setUploadModal({ isOpen: false, activityId: null, docType: '' })}
-              className="w-14 h-14 rounded-full bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-500 transition-all border border-white/10 flex items-center justify-center font-black"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-
-          {/* Fullscreen Content Area */}
-          <div className="flex-1 overflow-y-auto">
-            <FileUploadZone 
-              onSuccess={() => {
-                setUploadModal({ isOpen: false, activityId: null, docType: '' });
-                if (selectedProjectId) fetchActivities(selectedProjectId);
-              }}
-              activityId={uploadModal.activityId!}
-              docType={uploadModal.docType}
-              activityName={activities.find(a => a.activity_id === uploadModal.activityId)?.activity_name || 'Selected Activity'}
-            />
-          </div>
-        </div>
+        <FileUploadZone 
+          onSuccess={() => {
+            setUploadModal({ isOpen: false, activityId: null, docType: '' });
+            if (selectedProjectId) fetchActivities(selectedProjectId);
+          }}
+          onClose={() => setUploadModal({ isOpen: false, activityId: null, docType: '' })}
+          activityId={uploadModal.activityId!}
+          docType={uploadModal.docType}
+          contextName={activities.find(a => a.activity_id === uploadModal.activityId)?.activity_name || 'Selected Activity'}
+        />
       )}
-    </div>
-  );
-};
-
-// -- FILE UPLOAD ZONE (Keep Fullscreen Redesign) --
-
-const FileUploadZone: React.FC<{ activityId: number; docType: string; activityName: string; onSuccess: () => void }> = ({ activityId, docType, activityName, onSuccess }) => {
-  const [files, setFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: acceptedFiles => setFiles(prev => [...prev, ...acceptedFiles])
-  });
-
-  const removeFile = (name: string) => {
-    setFiles(files.filter(f => f.name !== name));
-  };
-
-  const handleUpload = async () => {
-    if (files.length === 0) return;
-    setUploading(true);
-    
-    try {
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append('file', file);
-        await api.post(`tasks/${activityId}/upload/?doc_type=${docType}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-      }
-      onSuccess();
-    } catch (err) {
-      console.error('Upload failed', err);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 p-12 items-stretch h-full min-h-[80vh]">
-      <div className="lg:w-1/2 space-y-10">
-        <div className="p-10 bg-accent-primary/5 border border-accent-primary/10 rounded-[3rem] shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none">
-            <Fingerprint className="w-40 h-40 text-white" />
-          </div>
-          <div className="flex items-center gap-5 mb-8 relative z-10">
-            <div className="w-14 h-14 bg-accent-primary/10 rounded-2xl flex items-center justify-center border border-accent-primary/20">
-              <Zap className="w-7 h-7 text-accent-primary" />
-            </div>
-            <div>
-              <p className="text-xs font-black text-slate-500 uppercase tracking-[0.3em] mb-1">Project Objective</p>
-              <p className="text-white font-black text-3xl tracking-tighter uppercase leading-tight">{activityName}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-5 py-5 px-8 bg-black/60 rounded-2xl border border-white/5 relative z-10">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-black text-slate-300 uppercase tracking-[0.2em]">Verified {docType} Uplink Protocol</span>
-          </div>
-        </div>
-        <div 
-          {...getRootProps()} 
-          className={`relative border-2 border-dashed rounded-[3.5rem] p-20 text-center transition-all duration-700 cursor-pointer group flex-1 flex flex-col items-center justify-center bg-black/20 ${
-            isDragActive ? 'border-accent-primary bg-accent-primary/5 ring-[20px] ring-accent-primary/5 scale-[1.02]' : 'border-white/10 hover:border-accent-primary/40 hover:bg-white/[0.02]'
-          }`}
-        >
-          <input {...getInputProps()} />
-          <div className="w-24 h-24 bg-white/5 rounded-3xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-700 group-hover:bg-accent-primary/10 group-hover:shadow-[0_0_50px_rgba(14,165,233,0.2)]">
-            <Upload className={`w-12 h-12 transition-all duration-500 ${isDragActive ? 'text-accent-primary animate-bounce' : 'text-slate-600 group-hover:text-accent-primary'}`} />
-          </div>
-          <p className="text-slate-200 font-black text-2xl uppercase tracking-tighter">Deliverable Ingestion</p>
-          <p className="text-slate-500 text-xs mt-4 uppercase font-bold opacity-50 underline underline-offset-8 decoration-accent-primary/50 tracking-widest">Drop assets here or click to manual browse</p>
-        </div>
-      </div>
-      <div className="lg:w-1/2 flex flex-col h-full">
-        <div className="flex-1 bg-white/[0.02] rounded-[3.5rem] border border-white/5 flex flex-col overflow-hidden relative shadow-2xl">
-          <div className="px-12 py-8 border-b border-white/5 flex justify-between items-center bg-white/5">
-            <h4 className="text-sm font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-4">
-              <FileText className="w-5 h-5 text-indigo-500" /> Queue Analysis ({files.length} Assets)
-            </h4>
-          </div>
-          <div className="flex-1 overflow-y-auto p-10 space-y-4 custom-scrollbar min-h-[400px]">
-            {files.map((f, i) => (
-              <div key={i} className="group flex items-center gap-6 p-6 bg-white/5 rounded-[2rem] border border-white/5 hover:border-white/10 transition-all duration-500 animate-in fade-in slide-in-from-right-8">
-                <FileText className="w-6 h-6 text-indigo-400" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-black text-slate-200 truncate uppercase tracking-tight">{f.name}</p>
-                  <p className="text-[10px] text-slate-500 font-mono font-bold mt-1">{(f.size/1024/1024).toFixed(2)} MB • VERIFIED READY</p>
-                </div>
-                <button onClick={() => removeFile(f.name)} className="p-3 hover:bg-rose-500/20 text-slate-600 hover:text-rose-500 rounded-xl transition-all"><X className="w-5 h-5 rotate-45" /></button>
-              </div>
-            ))}
-          </div>
-          <div className="p-10 bg-white/5 border-t border-white/5">
-            <button
-              disabled={files.length === 0 || uploading}
-              onClick={handleUpload}
-              className="w-full bg-gradient-to-r from-accent-primary to-indigo-600 hover:from-accent-secondary hover:to-indigo-500 disabled:opacity-20 text-white font-black py-7 rounded-[2.5rem] transition-all duration-700 shadow-[0_0_50px_rgba(14,165,233,0.2)] uppercase tracking-[0.3em] text-sm active:scale-[0.98] group"
-            >
-              {uploading ? <Loader2 className="animate-spin w-7 h-7" /> : 'Authorize Payload Transfer'}
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

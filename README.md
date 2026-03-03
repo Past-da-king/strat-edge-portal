@@ -6,7 +6,7 @@ Modernized, decoupled version of the Strat Edge Project Portal.
 - **Backend**: FastAPI, SQLAlchemy, Pydantic, JWT Auth.
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS, Lucide Icons.
 - **Database**: SQLite (Production-ready with SQLAlchemy).
-- **Storage**: Azure Blob Storage Integration.
+- **Storage**: Google Cloud Storage (GCS) Integration.
 
 ## Getting Started
 

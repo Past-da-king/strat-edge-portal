@@ -17,6 +17,8 @@ import { DenseTable, DenseRow, DenseCell } from '../components/DenseTable';
 import { Modal } from '../components/Modal';
 import { CustomSelect } from '../components/CustomSelect';
 
+import { FileUploadZone } from '../components/FileUploadZone';
+
 export const Risks: React.FC = () => {
   const [risks, setRisks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,22 +31,23 @@ export const Risks: React.FC = () => {
     description: ''
   });
 
+  const fetchData = async () => {
+    try {
+      const [projRes, riskRes] = await Promise.all([
+        api.get('/projects/'),
+        riskService.getRisks()
+      ]);
+      setProjects(projRes.data);
+      setRisks(riskRes);
+      if (projRes.data.length > 0) setSelectedProjectId(projRes.data[0].project_id);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [projRes, riskRes] = await Promise.all([
-          api.get('/projects/'),
-          riskService.getRisks()
-        ]);
-        setProjects(projRes.data);
-        setRisks(riskRes);
-        if (projRes.data.length > 0) setSelectedProjectId(projRes.data[0].project_id);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
@@ -140,22 +143,17 @@ export const Risks: React.FC = () => {
         />
       </Modal>
 
-      <Modal isOpen={resolveModal.isOpen} onClose={() => setResolveModal({ isOpen: false, riskId: null, description: '' })} title="Resolve Risk">
-        <div className="space-y-8">
-          <div className="p-6 bg-amber-500/5 border border-amber-500/10 rounded-2xl">
-            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-3 opacity-50 px-1">Risk Description</p>
-            <p className="text-slate-200 font-bold text-lg leading-tight uppercase tracking-tight">{resolveModal.description}</p>
-          </div>
-          <div className="border-2 border-dashed border-white/5 rounded-[2rem] p-16 text-center hover:border-accent-primary/20 transition-all cursor-pointer bg-black/20 group">
-            <Upload className="w-12 h-12 text-slate-600 mx-auto mb-4 group-hover:text-accent-primary transition-colors" />
-            <p className="text-slate-300 font-black text-sm uppercase tracking-widest">Upload Closure Proof</p>
-            <p className="text-slate-500 text-[10px] mt-2 uppercase font-bold tracking-widest opacity-50">Legal requirement for resolution</p>
-          </div>
-          <button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-2xl transition-all flex items-center justify-center gap-3 uppercase tracking-[0.2em] shadow-2xl shadow-emerald-600/20">
-            <CheckCircle2 className="w-6 h-6" /> CONFIRM RESOLUTION
-          </button>
-        </div>
-      </Modal>
+      {resolveModal.isOpen && (
+        <FileUploadZone 
+          riskId={resolveModal.riskId!}
+          contextName={resolveModal.description}
+          onSuccess={() => {
+            setResolveModal({ isOpen: false, riskId: null, description: '' });
+            fetchData();
+          }}
+          onClose={() => setResolveModal({ isOpen: false, riskId: null, description: '' })}
+        />
+      )}
     </div>
   );
 };

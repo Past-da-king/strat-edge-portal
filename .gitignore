@@ -41,6 +41,8 @@ yarn-error.log*
 *.sqlite3
 uploads/
 media/
+gcp-credentials.json
+*-*.json
 
 # Environment variables
 .env

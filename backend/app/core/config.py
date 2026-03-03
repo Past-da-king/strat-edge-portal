@@ -1,4 +1,3 @@
-
 import os
 from pydantic_settings import BaseSettings
 from typing import List
@@ -15,9 +14,11 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: List[str] = ["*"]  # In production, restrict this to your frontend domain
     
-    # Azure
-    AZURE_CONNECTION_STRING: str = os.getenv("AZURE_CONNECTION_STRING", "")
-    AZURE_CONTAINER_NAME: str = os.getenv("AZURE_CONTAINER_NAME", "uploads")
+    # Google Cloud Storage
+    GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "custom-mix-428318-h3")
+    GCP_BUCKET_NAME: str = os.getenv("GCP_BUCKET_NAME", "stratedgestore")
+    # Path to the JSON key file
+    GOOGLE_APPLICATION_CREDENTIALS: str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "gcp-credentials.json")
 
     class Config:
         case_sensitive = True

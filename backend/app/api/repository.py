@@ -32,10 +32,10 @@ def list_project_files(
             o.doc_type,
             o.uploaded_at as upload_date,
             t.activity_name as task_name,
-            u.full_name as uploader_name
+            COALESCE(u.full_name, 'Unknown System User') as uploader_name
         FROM task_outputs o
         JOIN baseline_schedule t ON o.activity_id = t.activity_id
-        JOIN users u ON o.uploaded_by = u.user_id
+        LEFT JOIN users u ON o.uploaded_by = u.user_id
         WHERE t.project_id = :pid
         ORDER BY o.uploaded_at DESC
     """)
@@ -61,10 +61,10 @@ def list_all_files(
             o.doc_type,
             o.uploaded_at as upload_date,
             t.activity_name as task_name,
-            u.full_name as uploader_name
+            COALESCE(u.full_name, 'Unknown System User') as uploader_name
         FROM task_outputs o
         JOIN baseline_schedule t ON o.activity_id = t.activity_id
-        JOIN users u ON o.uploaded_by = u.user_id
+        LEFT JOIN users u ON o.uploaded_by = u.user_id
         ORDER BY o.uploaded_at DESC
         LIMIT 100
     """)

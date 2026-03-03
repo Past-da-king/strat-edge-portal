@@ -53,8 +53,10 @@ export const Repository: React.FC = () => {
   const handleDownload = async (fileId: number, fileName: string) => {
     try {
       const res = await api.get(`/tasks/output/${fileId}/blob/`);
-      // In a real app, this would use the returned blob path/SAS URL
-      alert(`Download sequence initiated for: ${fileName}`);
+      const { signed_url } = res.data;
+      if (signed_url) {
+        window.open(signed_url, '_blank');
+      }
     } catch (err) {
       console.error(err);
     }
