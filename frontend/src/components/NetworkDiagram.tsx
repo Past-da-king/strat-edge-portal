@@ -8,11 +8,11 @@ import {
   type Node,
   type Edge,
   type NodeProps,
+  BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-// --- Custom Node Component ---
-const TaskNode = ({ data }: NodeProps<{
+interface TaskNodeData {
   label: string;
   responsible: string;
   start: string;
@@ -24,7 +24,11 @@ const TaskNode = ({ data }: NodeProps<{
   float: number;
   is_critical: boolean;
   status: string;
-}>) => {
+  [key: string]: unknown;
+}
+
+// --- Custom Node Component ---
+const TaskNode = ({ data }: NodeProps & { data: TaskNodeData }) => {
   const fillcolor = data.status === 'Complete' ? '#10b981' : (data.status === 'Active' ? '#f59e0b' : '#f8fafc');
   const fontcolor = (data.status === 'Complete' || data.status === 'Active') ? 'white' : '#1e293b';
   const borderColor = data.is_critical ? '#ef4444' : '#cbd5e1';
@@ -73,7 +77,7 @@ const TaskNode = ({ data }: NodeProps<{
 };
 
 const nodeTypes = {
-  task: TaskNode,
+  task: TaskNode as any,
 };
 
 interface NetworkDiagramProps {
@@ -103,7 +107,7 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ data }) => {
       },
       // Simple layout logic: horizontal spacing based on ES, vertical based on order
       position: { x: n.es * 150, y: index * 120 },
-    }));
+    } as Node));
   }, [data]);
 
   const initialEdges: Edge[] = useMemo(() => {
@@ -136,7 +140,7 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ data }) => {
         fitView
         colorMode="dark"
       >
-        <Background color="#334155" variant="dots" gap={20} size={1} />
+        <Background color="#334155" variant={BackgroundVariant.Dots} gap={20} size={1} />
         <Controls />
       </ReactFlow>
     </div>

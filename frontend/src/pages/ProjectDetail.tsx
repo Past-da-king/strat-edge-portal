@@ -236,7 +236,7 @@ export const ProjectDetail: React.FC = () => {
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
-            <BurndownChart ideal={burndownType === 'budget' ? (burndown?.ideal || []) : (taskBurndown?.ideal || [])} actual={burndownType === 'budget' ? (burndown?.actual || []) : (taskBurndown?.actual || [])} type={burndownType} />
+            <BurndownChart ideal={burndownType === 'budget' ? (burndown?.ideal || []) : (taskBurndown?.ideal || [])} actual={burndownType === 'budget' ? (burndown?.actual || []) : (taskBurndown?.actual || [])} type={burndownType === 'budget' ? 'budget' : 'tasks'} />
           </div>
           <div className="lg:col-span-1 space-y-4">
             <div className="p-5 bg-white/5 rounded-2xl border border-white/5">

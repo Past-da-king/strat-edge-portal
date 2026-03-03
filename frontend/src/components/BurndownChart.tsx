@@ -46,7 +46,10 @@ export const BurndownChart: React.FC<BurndownChartProps> = ({ ideal, actual, typ
           <Tooltip 
             contentStyle={{ backgroundColor: '#0f1115', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
             itemStyle={{ fontWeight: 'bold' }}
-            formatter={(value: number) => type === 'budget' ? `R ${value.toLocaleString()}` : `${value} Tasks`}
+            formatter={(value: any) => {
+              const val = Number(value);
+              return type === 'budget' ? `R ${val.toLocaleString()}` : `${val} Tasks`;
+            }}
           />
           <Line 
             type="monotone" 

@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Login needs raw axios to avoid interceptor issues with FormData or base URL if different
 // although here we can use the same instance if we want.
-export const login = async (username, password) => {
+export const login = async (username: string, password: string) => {
   const formData = new FormData();
   formData.append('username', username);
   formData.append('password', password);

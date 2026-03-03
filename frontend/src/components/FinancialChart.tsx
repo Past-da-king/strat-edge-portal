@@ -45,7 +45,7 @@ export const FinancialChart: React.FC<FinancialChartProps> = ({ budget, spent, f
           <Tooltip 
             cursor={{ fill: 'transparent' }}
             contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
-            formatter={(value: number) => [formatCurrency(value), 'Value']}
+            formatter={(value: any) => [formatCurrency(Number(value)), 'Value']}
           />
           <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
             {data.map((entry, index) => (
@@ -54,7 +54,7 @@ export const FinancialChart: React.FC<FinancialChartProps> = ({ budget, spent, f
             <LabelList 
               dataKey="value" 
               position="right" 
-              formatter={formatCurrency} 
+              formatter={(val: any) => formatCurrency(Number(val))} 
               style={{ fill: '#fff', fontSize: '10px', fontWeight: 'bold' }} 
             />
           </Bar>

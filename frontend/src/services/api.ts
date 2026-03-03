@@ -1,7 +1,14 @@
 import axios from 'axios';
 
+interface ImportMeta {
+  readonly env: {
+    readonly VITE_API_URL?: string;
+    [key: string]: string | undefined;
+  };
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: (import.meta as unknown as ImportMeta).env.VITE_API_URL || '/api',
 });
 
 // Request Interceptor: Add Auth Token and Trailing Slash
