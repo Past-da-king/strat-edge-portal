@@ -2,6 +2,7 @@ services:
   # 1. Backend (FastAPI)
   - type: web
     name: strat-edge-api
+    plan: free
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -18,10 +19,9 @@ services:
       - key: GOOGLE_APPLICATION_CREDENTIALS
         value: /etc/secrets/gcp-credentials.json
 
-  # 2. Frontend (React) - Correct Blueprint Format for Static Site
-  - type: web
+  # 2. Frontend (React)
+  - type: static
     name: strat-edge-portal
-    runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     rootDir: frontend
