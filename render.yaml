@@ -23,7 +23,7 @@ services:
     name: strat-edge-portal
     runtime: static
     buildCommand: npm install && npm run build
-    staticPublishDir: dist
+    publishDir: dist
     rootDir: frontend
     envVars:
       - key: VITE_API_URL
