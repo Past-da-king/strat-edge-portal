@@ -19,7 +19,7 @@ services:
         value: /etc/secrets/gcp-credentials.json
 
   # 2. Frontend (React)
-  - type: static
+  - type: static_site
     name: strat-edge-portal
     runtime: node
     buildCommand: npm install && npm run build
