@@ -18,12 +18,11 @@ services:
       - key: GOOGLE_APPLICATION_CREDENTIALS
         value: /etc/secrets/gcp-credentials.json
 
-  # 2. Frontend (React) - This is the correct way to define a Static Site in Blueprints
-  - type: web
+  # 2. Frontend (React) - Free Static Site
+  - type: static_site
     name: strat-edge-portal
-    runtime: static
     buildCommand: npm install && npm run build
-    staticPublishPath: dist
+    publishDir: dist
     rootDir: frontend
     envVars:
       - key: VITE_API_URL
