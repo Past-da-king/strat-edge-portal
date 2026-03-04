@@ -7,13 +7,25 @@ interface ImportMeta {
   };
 }
 
+// Standard Vite env access
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+const FALLBACK_API_URL = 'https://strat-edge-api.onrender.com';
+
 const api = axios.create({
-  baseURL: (import.meta as unknown as ImportMeta).env.VITE_API_URL || 'http://localhost:8000',
+  baseURL: VITE_API_URL || FALLBACK_API_URL,
 });
+
+console.log('--- API CONFIGURATION ---');
+console.log('VITE_API_URL:', VITE_API_URL);
+console.log('Final BaseURL:', api.defaults.baseURL);
+console.log('-------------------------');
 
 // Request Interceptor: Add Auth Token and Trailing Slash
 api.interceptors.request.use(
   (config) => {
+    const fullUrl = `${config.baseURL || ''}/${config.url}`;
+    console.log(`API Request Started: ${config.method?.toUpperCase()} ${fullUrl}`);
+    
     // 1. Ensure trailing slash for consistent backend routing (FastAPI preference)
     if (config.url && !config.url.endsWith('/') && !config.url.includes('?')) {
       config.url += '/';

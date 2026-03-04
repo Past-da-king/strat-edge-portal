@@ -4,16 +4,38 @@ import axios from 'axios';
 // Login needs raw axios to avoid interceptor issues with FormData or base URL if different
 // although here we can use the same instance if we want.
 export const login = async (username: string, password: string) => {
-  const formData = new FormData();
-  formData.append('username', username);
-  formData.append('password', password);
+  console.log('Attempting login for user:', username);
+  
+  // FastAPI OAuth2PasswordRequestForm expects x-www-form-urlencoded
+  const params = new URLSearchParams();
+  params.append('username', username);
+  params.append('password', password);
 
-  // Use the shared 'api' instance which uses VITE_API_URL
-  const response = await api.post(`auth/login/`, formData);
-  if (response.data.access_token) {
-    localStorage.setItem('user', JSON.stringify(response.data));
+  try {
+    console.log('Sending POST request to auth/login/');
+    const response = await api.post(`auth/login/`, params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+    
+    console.log('Login response received:', response.status);
+    
+    if (response.data.access_token) {
+      console.log('Login successful, storing token');
+      localStorage.setItem('user', JSON.stringify(response.data));
+    } else {
+      console.warn('Login response missing access_token');
+    }
+    return response.data;
+  } catch (err: any) {
+    console.error('Login service error:', err.message);
+    if (err.response) {
+      console.error('Error status:', err.response.status);
+      console.error('Error data:', err.response.data);
+    }
+    throw err;
   }
-  return response.data;
 };
 
 export const logout = () => {
