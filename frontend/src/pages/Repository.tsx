@@ -480,32 +480,39 @@ export const Repository: React.FC = () => {
 const ActionMenu = ({ type, id, name, activeMenu, setActiveMenu, onDownload, onPreview, onDelete, onLink, onViewRelated }: any) => {
   const isOpen = activeMenu?.type === type && activeMenu?.id === id;
 
+  const handleToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation(); // Critical: Stop click from bubbling to parent row/card
+    setActiveMenu(isOpen ? null : { type, id, name });
+  };
+
   return (
     <div className="relative">
       <button 
-        onClick={(e) => { e.stopPropagation(); setActiveMenu(isOpen ? null : { type, id, name }); }}
-        className="p-2 bg-slate-50 dark:bg-white/5 lg:bg-transparent rounded-lg transition-all text-slate-400 hover:text-slate-600 dark:hover:text-white border border-slate-200 dark:border-white/10 lg:border-0"
+        onClick={handleToggle}
+        className="p-2 bg-slate-50 dark:bg-white/5 lg:bg-transparent rounded-lg transition-all text-slate-400 hover:text-slate-600 dark:hover:text-white border border-slate-200 dark:border-white/10 lg:border-0 relative z-10"
       >
-        <MoreVertical className="w-5 h-5" />
+        <MoreVertical className="w-5 h-5 pointer-events-none" />
       </button>
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-[150]" onClick={() => setActiveMenu(null)} />
+          {/* Backdrop with higher z-index */}
+          <div className="fixed inset-0 z-[900] bg-black/20 dark:bg-black/40 backdrop-blur-[1px]" onClick={(e) => { e.stopPropagation(); setActiveMenu(null); }} />
           
           {/* DESKTOP MENU: Floating Absolute */}
-          <div className="hidden lg:block absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl z-[160] py-2 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
+          <div className="hidden lg:block absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl z-[910] py-2 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
             <MenuContent onPreview={onPreview} onDownload={onDownload} onLink={onLink} onViewRelated={onViewRelated} onDelete={onDelete} />
           </div>
 
           {/* MOBILE MENU: Centered Bottom Sheet / Popup */}
-          <div className="lg:hidden fixed inset-x-4 bottom-24 z-[200] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.3)] p-2 animate-in slide-in-from-bottom-10 duration-300">
+          <div className="lg:hidden fixed inset-x-4 bottom-24 z-[1000] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.3)] p-2 animate-in slide-in-from-bottom-10 duration-300">
             <div className="p-4 border-b border-slate-100 dark:border-white/5 mb-2">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">File Actions</p>
               <p className="text-sm font-black text-slate-700 dark:text-slate-200 truncate">{name}</p>
             </div>
             <MenuContent onPreview={onPreview} onDownload={onDownload} onLink={onLink} onViewRelated={onViewRelated} onDelete={onDelete} />
-            <button onClick={() => setActiveMenu(null)} className="w-full py-4 mt-2 text-slate-500 font-black uppercase text-[10px] tracking-widest bg-slate-50 dark:bg-white/5 rounded-2xl">Cancel</button>
+            <button onClick={(e) => { e.stopPropagation(); setActiveMenu(null); }} className="w-full py-4 mt-2 text-slate-500 font-black uppercase text-[10px] tracking-widest bg-slate-50 dark:bg-white/5 rounded-2xl">Cancel</button>
           </div>
         </>
       )}

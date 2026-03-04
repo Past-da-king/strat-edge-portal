@@ -31,16 +31,12 @@ export const Projects: React.FC = () => {
   );
 
   return (
-    <div className="p-8">
+    <div className="p-8 pb-24">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">Project Portfolio</h1>
           <p className="text-slate-500 dark:text-slate-400">Manage and track performance across all active projects.</p>
         </div>
-        <button className="bg-accent-primary hover:bg-accent-secondary text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg shadow-accent-primary/20 group">
-          <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
-          NEW PROJECT
-        </button>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-8">
