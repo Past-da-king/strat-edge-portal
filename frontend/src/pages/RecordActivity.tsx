@@ -63,16 +63,24 @@ export const RecordActivity: React.FC = () => {
   const fetchData = async () => {
     if (!selectedProjectId) return;
     try {
-      const [actRes, delRes, diagRes] = await Promise.all([
+      // 1. Fetch Core Data (Crucial for page load)
+      const [actRes, delRes] = await Promise.all([
         api.get(`/tasks/project/${selectedProjectId}/`),
-        api.get(`/repository/project/${selectedProjectId}/`),
-        api.get(`/projects/${selectedProjectId}/network/`)
+        api.get(`/repository/project/${selectedProjectId}/`)
       ]);
       setActivities(actRes.data);
       setDeliverables(delRes.data);
-      setDiagramData(diagRes.data);
+
+      // 2. Fetch Diagram Data separately (Corrected path: network-diagram)
+      try {
+        const diagRes = await api.get(`/projects/${selectedProjectId}/network-diagram/`);
+        setDiagramData(diagRes.data);
+      } catch (diagErr) {
+        console.warn('Network diagram failed to load, but activities will still show.', diagErr);
+        setDiagramData(null);
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Critical data fetch failed', err);
     }
   };
 
