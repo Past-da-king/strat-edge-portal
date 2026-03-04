@@ -370,8 +370,14 @@ export const Repository: React.FC = () => {
                     setActiveMenu={setActiveMenuId} 
                     onDownload={() => handleDownload('del', file.output_id)} 
                     onPreview={() => handlePreview('del', file.output_id, file.file_name)} 
-                    onDelete={() => setDeleteConfirm({ isOpen: true, id: file.output_id, name: file.file_name, type: 'del' })} 
-                    onLink={() => setLinkModal({ isOpen: true, source: { type: 'deliverable', id: file.output_id, name: file.file_name }, selectedTargets: [] })} 
+                    onDelete={() => {
+                      setDeleteConfirm({ isOpen: true, id: file.output_id, name: file.file_name, type: 'del' });
+                      setActiveMenuId(null);
+                    }} 
+                    onLink={() => {
+                      setLinkModal({ isOpen: true, source: { type: 'deliverable', id: file.output_id, name: file.file_name }, selectedTargets: [] });
+                      setActiveMenuId(null);
+                    }}
                     onViewRelated={() => handleViewRelated('deliverable', file.output_id, file.file_name)} 
                   />
                 </DenseCell>
@@ -402,8 +408,14 @@ export const Repository: React.FC = () => {
                   setActiveMenu={setActiveMenuId} 
                   onDownload={() => handleDownload('kb', item.file_id)} 
                   onPreview={() => handlePreview('kb', item.file_id, item.name)} 
-                  onDelete={() => setDeleteConfirm({ isOpen: true, id: item.file_id, name: item.name, type: 'kb' })} 
-                  onLink={() => setLinkModal({ isOpen: true, source: { type: 'personal', id: item.file_id, name: item.name }, selectedTargets: [] })} 
+                  onDelete={() => {
+                    setDeleteConfirm({ isOpen: true, id: item.file_id, name: item.name, type: 'kb' });
+                    setActiveMenuId(null);
+                  }} 
+                  onLink={() => {
+                    setLinkModal({ isOpen: true, source: { type: 'personal', id: item.file_id, name: item.name }, selectedTargets: [] });
+                    setActiveMenuId(null);
+                  }} 
                   onViewRelated={() => handleViewRelated('personal', item.file_id, item.name)} 
                 />
               </div>
@@ -427,10 +439,16 @@ export const Repository: React.FC = () => {
             <div className="grid grid-cols-1 gap-2">
               <MenuAction icon={<Eye className="w-5 h-5 text-accent-primary" />} label="Quick View" onClick={() => handlePreview(activeMenuId.type, activeMenuId.id, activeMenuId.name)} />
               <MenuAction icon={<Download className="w-5 h-5 text-slate-400" />} label="Download Document" onClick={() => handleDownload(activeMenuId.type, activeMenuId.id)} />
-              <MenuAction icon={<LinkIcon className="w-5 h-5 text-indigo-500" />} label="Link to Another File" onClick={() => setLinkModal({ isOpen: true, source: { type: activeMenuId.type === 'del' ? 'deliverable' : 'personal', id: activeMenuId.id, name: activeMenuId.name }, selectedTargets: [] })} />
+              <MenuAction icon={<LinkIcon className="w-5 h-5 text-indigo-500" />} label="Link to Another File" onClick={() => {
+                setLinkModal({ isOpen: true, source: { type: activeMenuId.type === 'del' ? 'deliverable' : 'personal', id: activeMenuId.id, name: activeMenuId.name }, selectedTargets: [] });
+                setActiveMenuId(null);
+              }} />
               <MenuAction icon={<Network className="w-5 h-5 text-emerald-500" />} label="Show Related Files" onClick={() => handleViewRelated(activeMenuId.type === 'del' ? 'deliverable' : 'personal', activeMenuId.id, activeMenuId.name)} />
               <div className="h-px bg-slate-100 dark:bg-white/5 my-2" />
-              <MenuAction icon={<Trash2 className="w-5 h-5 text-rose-500" />} label="Delete Permanently" onClick={() => setDeleteConfirm({ isOpen: true, id: activeMenuId.id, name: activeMenuId.name, type: activeMenuId.type })} />
+              <MenuAction icon={<Trash2 className="w-5 h-5 text-rose-500" />} label="Delete Permanently" onClick={() => {
+                setDeleteConfirm({ isOpen: true, id: activeMenuId.id, name: activeMenuId.name, type: activeMenuId.type });
+                setActiveMenuId(null);
+              }} />
             </div>
             <button onClick={() => setActiveMenuId(null)} className="w-full py-5 mt-6 font-black text-[10px] uppercase tracking-[0.3em] text-slate-500 bg-slate-100 dark:bg-white/5 rounded-2xl">Dismiss Actions</button>
           </div>

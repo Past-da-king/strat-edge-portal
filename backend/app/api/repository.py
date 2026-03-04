@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from ..models.database import get_db, TaskOutput, Project, User, RepositoryFile, RepositoryLink
 from ..schemas.repository import FileRecord, RepositoryFile as RepoFileSchema, RepositoryFileCreate, SearchResult, RelatedFile
 from .deps import get_current_user
