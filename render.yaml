@@ -35,4 +35,4 @@ services:
         fromService:
           type: web
           name: strat-edge-api
-          property: host
+          property: url

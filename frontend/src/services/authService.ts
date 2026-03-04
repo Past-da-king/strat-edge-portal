@@ -8,8 +8,8 @@ export const login = async (username: string, password: string) => {
   formData.append('username', username);
   formData.append('password', password);
 
-  // Still absolute because it doesn't use the 'api' instance
-  const response = await axios.post(`/api/auth/login/`, formData);
+  // Use the shared 'api' instance which uses VITE_API_URL
+  const response = await api.post(`auth/login/`, formData);
   if (response.data.access_token) {
     localStorage.setItem('user', JSON.stringify(response.data));
   }

@@ -8,16 +8,17 @@ interface ImportMeta {
 }
 
 const api = axios.create({
-  baseURL: (import.meta as unknown as ImportMeta).env.VITE_API_URL || '/api',
+  baseURL: (import.meta as unknown as ImportMeta).env.VITE_API_URL || 'http://localhost:8000',
 });
 
 // Request Interceptor: Add Auth Token and Trailing Slash
 api.interceptors.request.use(
   (config) => {
-    // 1. Ensure trailing slash for consistent backend routing
+    // 1. Ensure trailing slash for consistent backend routing (FastAPI preference)
     if (config.url && !config.url.endsWith('/') && !config.url.includes('?')) {
       config.url += '/';
-    } else if (config.url && config.url.includes('?')) {
+    }
+ else if (config.url && config.url.includes('?')) {
       const [path, query] = config.url.split('?');
       if (!path.endsWith('/')) {
         config.url = `${path}/?${query}`;
