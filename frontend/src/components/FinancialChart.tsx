@@ -18,8 +18,10 @@ interface FinancialChartProps {
 }
 
 export const FinancialChart: React.FC<FinancialChartProps> = ({ budget, spent, forecast }) => {
+  const isDark = document.documentElement.classList.contains('dark');
+  
   const data = [
-    { name: 'Budget', value: budget, color: '#1e293b' },
+    { name: 'Budget', value: budget, color: isDark ? '#1e293b' : '#e2e8f0' },
     { name: 'Forecast', value: forecast, color: '#7c3aed' },
     { name: 'Actual', value: spent, color: '#0891b2' },
   ];
@@ -40,11 +42,17 @@ export const FinancialChart: React.FC<FinancialChartProps> = ({ budget, spent, f
             type="category" 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fill: '#94a3b8', fontSize: 12 }}
+            tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 12 }}
           />
           <Tooltip 
             cursor={{ fill: 'transparent' }}
-            contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
+            contentStyle={{ 
+              backgroundColor: isDark ? '#1e293b' : '#fff', 
+              border: isDark ? 'none' : '1px solid #e2e8f0', 
+              borderRadius: '8px', 
+              color: isDark ? '#fff' : '#0f172a' 
+            }}
+            itemStyle={{ color: isDark ? '#fff' : '#0f172a' }}
             formatter={(value: any) => [formatCurrency(Number(value)), 'Value']}
           />
           <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
@@ -55,7 +63,7 @@ export const FinancialChart: React.FC<FinancialChartProps> = ({ budget, spent, f
               dataKey="value" 
               position="right" 
               formatter={(val: any) => formatCurrency(Number(val))} 
-              style={{ fill: '#fff', fontSize: '10px', fontWeight: 'bold' }} 
+              style={{ fill: isDark ? '#fff' : '#0f172a', fontSize: '10px', fontWeight: 'bold' }} 
             />
           </Bar>
         </BarChart>

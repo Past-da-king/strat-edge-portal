@@ -69,7 +69,7 @@ export const Risks: React.FC = () => {
     <div className="p-8">
       <div className="flex items-center justify-between mb-12">
         <div>
-          <h1 className="text-4xl font-black text-white mb-2 tracking-tighter flex items-center gap-4">
+          <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-2 tracking-tighter flex items-center gap-4">
             <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/20">
               <AlertTriangle className="w-7 h-7 text-amber-500" />
             </div>
@@ -97,14 +97,14 @@ export const Risks: React.FC = () => {
           <Loader2 className="w-16 h-16 text-accent-primary animate-spin opacity-20" />
         </div>
       ) : (
-        <div className="glass rounded-[2rem] p-10 border border-white/5 shadow-2xl">
+        <div className="glass rounded-[2rem] p-10 border border-slate-200 dark:border-white/5 shadow-2xl">
           <DenseTable headers={['Description', 'Impact', 'Status', 'Mitigation Plan', 'Actions']}>
             {risks.map((risk: any) => (
               <DenseRow key={risk.risk_id}>
                 <DenseCell flex={4}>
                   <div className="flex items-center gap-4 py-4">
                     {risk.status === 'Open' ? <Clock className="w-5 h-5 text-rose-500 opacity-50" /> : <ShieldCheck className="w-5 h-5 text-emerald-500" />}
-                    <span className="font-black text-slate-200 uppercase tracking-tight text-sm leading-tight">{risk.description}</span>
+                    <span className="font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight text-sm leading-tight">{risk.description}</span>
                   </div>
                 </DenseCell>
                 <DenseCell flex={1.5} align="center">
@@ -159,8 +159,8 @@ export const Risks: React.FC = () => {
 };
 
 const StatCard = ({ label, value, color }: { label: string; value: number; color: string }) => (
-  <div className="glass p-8 rounded-[2rem] border border-white/5 shadow-xl group hover:border-white/10 transition-all">
-    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 group-hover:text-slate-400 transition-colors">{label}</p>
+  <div className="glass p-8 rounded-[2rem] border border-slate-200 dark:border-white/5 shadow-xl group hover:border-slate-300 dark:hover:border-white/10 transition-all">
+    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 group-hover:text-slate-600 dark:group-hover:text-slate-400 transition-colors">{label}</p>
     <p className={`text-5xl font-black ${color} tracking-tighter`}>{value}</p>
   </div>
 );
@@ -198,7 +198,7 @@ const AddRiskForm: React.FC<{ projects: any[]; onSuccess: () => void }> = ({ pro
           type="text" 
           value={formData.description}
           onChange={e => setFormData({...formData, description: e.target.value})}
-          className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-4 text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all font-bold text-sm" 
+          className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-4 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all font-bold text-sm" 
           placeholder="e.g. DELAY IN MATERIALS..."
           required 
         />
@@ -215,7 +215,7 @@ const AddRiskForm: React.FC<{ projects: any[]; onSuccess: () => void }> = ({ pro
               className={`flex-1 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] border transition-all duration-500 ${
                 formData.impact === level 
                   ? 'bg-accent-primary text-white border-accent-primary shadow-lg shadow-accent-primary/20' 
-                  : 'bg-black/40 text-slate-500 border-white/5 hover:border-white/10'
+                  : 'bg-slate-100 dark:bg-black/40 text-slate-500 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10'
               }`}
             >
               {level === 'L' ? 'Low' : level === 'M' ? 'Medium' : 'High'}
@@ -229,7 +229,7 @@ const AddRiskForm: React.FC<{ projects: any[]; onSuccess: () => void }> = ({ pro
         <textarea 
           value={formData.mitigation_action}
           onChange={e => setFormData({...formData, mitigation_action: e.target.value})}
-          className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-4 text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all h-32 font-medium leading-relaxed" 
+          className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-4 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all h-32 font-medium leading-relaxed" 
           placeholder="Describe how to handle this risk..."
         />
       </div>

@@ -15,6 +15,8 @@ interface CostBreakdownProps {
 const COLORS = ['#db2777', '#4f46e5', '#ea580c', '#059669', '#94a3b8'];
 
 export const CostBreakdown: React.FC<CostBreakdownProps> = ({ data }) => {
+  const isDark = document.documentElement.classList.contains('dark');
+  
   if (!data || data.length === 0) {
     return (
       <div className="h-[240px] flex items-center justify-center text-slate-500 text-sm italic">
@@ -42,10 +44,19 @@ export const CostBreakdown: React.FC<CostBreakdownProps> = ({ data }) => {
             ))}
           </Pie>
           <Tooltip 
-            contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px' }}
-            itemStyle={{ color: '#fff' }}
+            contentStyle={{ 
+              backgroundColor: isDark ? '#1e293b' : '#fff', 
+              border: isDark ? 'none' : '1px solid #e2e8f0', 
+              borderRadius: '8px',
+              color: isDark ? '#fff' : '#0f172a'
+            }}
+            itemStyle={{ color: isDark ? '#fff' : '#0f172a' }}
           />
-          <Legend verticalAlign="bottom" height={36} />
+          <Legend 
+            verticalAlign="bottom" 
+            height={36} 
+            formatter={(value) => <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>{value}</span>}
+          />
         </PieChart>
       </ResponsiveContainer>
     </div>

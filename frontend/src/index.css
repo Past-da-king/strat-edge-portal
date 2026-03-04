@@ -3,6 +3,26 @@
 @tailwind utilities;
 
 :root {
+  --background: #f8fafc;
+  --sidebar: #ffffff;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  color-scheme: light;
+}
+
+.dark {
+  --background: #0a0a0c;
+  --sidebar: #111114;
+  --card: #16161a;
+  --border: #1e293b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.05);
   color-scheme: dark;
 }
 
@@ -11,14 +31,11 @@ html, body {
   padding: 0;
   min-height: 100vh;
   width: 100vw;
-  background-color: #0a0a0c;
-  /* Removed zoom/scale that caused the margin bug */
+  background-color: var(--background);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* 
-   We control density through the root font size.
-   14px provides a good balance of high density without being "tiny".
-*/
 html {
   font-size: 14px; 
 }
@@ -30,23 +47,24 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--text-secondary);
+  opacity: 0.2;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--accent-primary);
 }
 
 /* Glassmorphism utility */
 .glass {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
 }
 
 /* Typography refinements */

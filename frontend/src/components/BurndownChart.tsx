@@ -18,16 +18,18 @@ interface BurndownChartProps {
 }
 
 export const BurndownChart: React.FC<BurndownChartProps> = ({ ideal, actual, type = 'budget' }) => {
+  const isDark = document.documentElement.classList.contains('dark');
+  
   return (
     <div className="h-[340px] w-full bg-transparent rounded-2xl">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
           <XAxis 
             dataKey="date" 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fill: '#94a3b8', fontSize: 10 }}
+            tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 10 }}
             tickFormatter={(value) => {
                try {
                  const date = new Date(value);
@@ -40,12 +42,18 @@ export const BurndownChart: React.FC<BurndownChartProps> = ({ ideal, actual, typ
           <YAxis 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fill: '#94a3b8', fontSize: 10 }}
+            tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 10 }}
             tickFormatter={(value) => type === 'budget' ? `R ${value / 1000}k` : value}
           />
           <Tooltip 
-            contentStyle={{ backgroundColor: '#0f1115', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
-            itemStyle={{ fontWeight: 'bold' }}
+            contentStyle={{ 
+              backgroundColor: isDark ? '#0f1115' : '#fff', 
+              border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e2e8f0', 
+              borderRadius: '12px', 
+              fontSize: '12px',
+              color: isDark ? '#fff' : '#0f172a'
+            }}
+            itemStyle={{ fontWeight: 'bold', color: isDark ? '#fff' : '#0f172a' }}
             formatter={(value: any) => {
               const val = Number(value);
               return type === 'budget' ? `R ${val.toLocaleString()}` : `${val} Tasks`;

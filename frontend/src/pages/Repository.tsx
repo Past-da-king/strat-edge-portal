@@ -74,7 +74,7 @@ export const Repository: React.FC = () => {
     <div className="p-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
         <div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase mb-2 flex items-center gap-4">
+          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase mb-2 flex items-center gap-4">
             <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center border border-indigo-500/20">
               <Folder className="w-7 h-7 text-indigo-500" />
             </div>
@@ -91,13 +91,13 @@ export const Repository: React.FC = () => {
               placeholder="Filter repository..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-black/40 border border-white/5 rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 w-64 transition-all"
+              className="bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-xl pl-12 pr-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 w-64 transition-all"
             />
           </div>
           <select 
             value={selectedProjectId}
             onChange={(e) => setSelectedProjectId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-            className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-accent-primary/20"
+            className="bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-accent-primary/20"
           >
             <option value="all">ALL PROJECTS</option>
             {projects.map(p => <option key={p.project_id} value={p.project_id}>{p.project_name}</option>)}
@@ -105,17 +105,17 @@ export const Repository: React.FC = () => {
         </div>
       </div>
 
-      <div className="glass rounded-[2.5rem] p-10 border border-white/5 shadow-2xl overflow-hidden">
+      <div className="glass rounded-[2.5rem] p-10 border border-slate-200 dark:border-white/5 shadow-2xl overflow-hidden">
         <DenseTable headers={['Deliverable Name', 'Upload Date', 'Context / Task', 'Operator', 'Action']}>
           {filteredFiles.map((file) => (
             <DenseRow key={file.output_id}>
               <DenseCell flex={3}>
                 <div className="flex items-center gap-4 py-3">
-                  <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-slate-500 border border-white/5">
+                  <div className="w-10 h-10 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-500 border border-slate-200 dark:border-white/5">
                     <FileText className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-black text-slate-200 uppercase tracking-tight truncate max-w-xs">{file.file_name}</p>
+                    <p className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight truncate max-w-xs">{file.file_name}</p>
                     <span className="text-[9px] font-black text-accent-primary uppercase tracking-widest bg-accent-primary/5 px-2 py-0.5 rounded mt-1 inline-block border border-accent-primary/10">{file.doc_type}</span>
                   </div>
                 </div>
@@ -127,7 +127,7 @@ export const Repository: React.FC = () => {
                 </div>
               </DenseCell>
               <DenseCell flex={2}>
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-tight italic opacity-60">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight italic opacity-60">
                   <ArrowUpRight className="w-3 h-3" />
                   {file.task_name}
                 </div>
@@ -137,7 +137,7 @@ export const Repository: React.FC = () => {
                   <div className="w-6 h-6 bg-indigo-500/20 rounded-full flex items-center justify-center text-[10px] font-black text-indigo-400">
                     {file.uploader_name?.charAt(0)}
                   </div>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">{file.uploader_name}</span>
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter">{file.uploader_name}</span>
                 </div>
               </DenseCell>
               <DenseCell align="right">
@@ -153,8 +153,8 @@ export const Repository: React.FC = () => {
         </DenseTable>
         {filteredFiles.length === 0 && (
           <div className="py-40 text-center">
-            <Folder className="w-20 h-20 text-slate-800 mx-auto mb-6" />
-            <p className="text-2xl font-black text-slate-700 uppercase tracking-widest">Repository Empty</p>
+            <Folder className="w-20 h-20 text-slate-300 dark:text-slate-800 mx-auto mb-6" />
+            <p className="text-2xl font-black text-slate-400 dark:text-slate-700 uppercase tracking-widest">Repository Empty</p>
             <p className="text-slate-500 mt-2 font-medium">No documents matching your search or filters.</p>
           </div>
         )}

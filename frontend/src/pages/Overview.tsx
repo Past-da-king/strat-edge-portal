@@ -85,9 +85,9 @@ export const Overview: React.FC = () => {
       </div>
 
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
           Active Initiatives
-          <span className="text-xs bg-white/5 border border-white/10 px-3 py-1 rounded-full text-slate-500 font-mono">{projects.length}</span>
+          <span className="text-xs bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-3 py-1 rounded-full text-slate-500 font-mono">{projects.length}</span>
         </h2>
       </div>
 
@@ -109,13 +109,13 @@ export const Overview: React.FC = () => {
             <div className="flex gap-2">
               <button 
                 onClick={() => navigate(`/projects/${project.project_id}`)}
-                className="flex-1 bg-white/5 hover:bg-accent-primary hover:text-white text-slate-400 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border border-white/5 group-hover:border-accent-primary/20"
+                className="flex-1 bg-slate-100 dark:bg-white/5 hover:bg-accent-primary hover:text-white text-slate-600 dark:text-slate-400 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border border-slate-200 dark:border-white/5 group-hover:border-accent-primary/20"
               >
                 DASHBOARD <ArrowUpRight className="w-3 h-3" />
               </button>
               <button 
                 onClick={() => handleDownloadReport(project.project_id, project.project_name)}
-                className="bg-white/5 hover:bg-white/10 text-slate-400 py-3 px-4 rounded-xl text-xs font-bold transition-all border border-white/5 flex items-center gap-2"
+                className="bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 py-3 px-4 rounded-xl text-xs font-bold transition-all border border-slate-200 dark:border-white/5 flex items-center gap-2"
               >
                 <FileText className="w-3 h-3" /> REPORT
               </button>
@@ -128,12 +128,12 @@ export const Overview: React.FC = () => {
 };
 
 const StatCard = ({ label, value, icon }: { label: string; value: string; icon: any }) => (
-  <div className="glass p-6 rounded-3xl border border-white/5 relative group hover:border-accent-primary/20 transition-all">
+  <div className="glass p-6 rounded-3xl border border-slate-200 dark:border-white/5 relative group hover:border-accent-primary/20 transition-all shadow-sm">
     <div className="w-10 h-10 bg-accent-primary/10 rounded-xl flex items-center justify-center text-accent-primary mb-4 group-hover:scale-110 transition-transform">
       {icon}
     </div>
     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{label}</p>
-    <p className="text-2xl font-bold text-white">{value}</p>
+    <p className="text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
   </div>
 );
 
