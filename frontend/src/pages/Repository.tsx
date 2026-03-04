@@ -368,6 +368,11 @@ export const Repository: React.FC = () => {
                     name={file.file_name} 
                     activeMenu={activeMenuId} 
                     setActiveMenu={setActiveMenuId} 
+                    onDownload={() => handleDownload('del', file.output_id)} 
+                    onPreview={() => handlePreview('del', file.output_id, file.file_name)} 
+                    onDelete={() => setDeleteConfirm({ isOpen: true, id: file.output_id, name: file.file_name, type: 'del' })} 
+                    onLink={() => setLinkModal({ isOpen: true, source: { type: 'deliverable', id: file.output_id, name: file.file_name }, selectedTargets: [] })} 
+                    onViewRelated={() => handleViewRelated('deliverable', file.output_id, file.file_name)} 
                   />
                 </DenseCell>
               </DenseRow>
@@ -395,6 +400,11 @@ export const Repository: React.FC = () => {
                   name={item.name} 
                   activeMenu={activeMenuId} 
                   setActiveMenu={setActiveMenuId} 
+                  onDownload={() => handleDownload('kb', item.file_id)} 
+                  onPreview={() => handlePreview('kb', item.file_id, item.name)} 
+                  onDelete={() => setDeleteConfirm({ isOpen: true, id: item.file_id, name: item.name, type: 'kb' })} 
+                  onLink={() => setLinkModal({ isOpen: true, source: { type: 'personal', id: item.file_id, name: item.name }, selectedTargets: [] })} 
+                  onViewRelated={() => handleViewRelated('personal', item.file_id, item.name)} 
                 />
               </div>
             ))}
@@ -424,14 +434,6 @@ export const Repository: React.FC = () => {
             </div>
             <button onClick={() => setActiveMenuId(null)} className="w-full py-5 mt-6 font-black text-[10px] uppercase tracking-[0.3em] text-slate-500 bg-slate-100 dark:bg-white/5 rounded-2xl">Dismiss Actions</button>
           </div>
-        </div>
-      )}
-
-      {/* --- DESKTOP POPUP MENU --- */}
-      {activeMenuId && (
-        <div className="hidden lg:block">
-           <div className="fixed inset-0 z-[150]" onClick={() => setActiveMenuId(null)} />
-           {/* Note: This logic would ideally be tied to the button position, but for master fix we use activeMenuId */}
         </div>
       )}
 
@@ -476,18 +478,50 @@ export const Repository: React.FC = () => {
 };
 
 // Simplified trigger component to avoid nesting issues
-const ActionTrigger = ({ type, id, name, activeMenu, setActiveMenu }: any) => {
+const ActionTrigger = ({ type, id, name, activeMenu, setActiveMenu, onDownload, onPreview, onDelete, onLink, onViewRelated }: any) => {
+  const isOpen = activeMenu?.type === type && activeMenu?.id === id;
+
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
     setActiveMenu({ type, id, name });
   };
+
   return (
-    <button onClick={handleToggle} className="p-2 bg-slate-50 dark:bg-white/5 lg:bg-transparent rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white border border-slate-200 dark:border-white/10 lg:border-0 relative z-10"><MoreVertical className="w-5 h-5 pointer-events-none" /></button>
+    <div className="relative">
+      <button 
+        onClick={handleToggle} 
+        className="p-2 bg-slate-50 dark:bg-white/5 lg:bg-transparent rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white border border-slate-200 dark:border-white/10 lg:border-0 relative z-10"
+      >
+        <MoreVertical className="w-5 h-5 pointer-events-none" />
+      </button>
+
+      {isOpen && (
+        <div className="hidden lg:block">
+          <div className="fixed inset-0 z-[150]" onClick={(e) => { e.stopPropagation(); setActiveMenu(null); }} />
+          <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl z-[160] py-2 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
+            <MenuAction icon={<Eye className="w-4 h-4 text-accent-primary" />} label="Quick View" onClick={onPreview} />
+            <button onClick={(e) => { e.stopPropagation(); onDownload(); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+              <Download className="w-4 h-4 text-slate-400" /> Download Document
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); onLink(); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+              <LinkIcon className="w-4 h-4 text-indigo-500" /> Link to Another File
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); onViewRelated(); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+              <Network className="w-4 h-4 text-emerald-500" /> Show Related Files
+            </button>
+            <div className="h-px bg-slate-100 dark:bg-white/5 my-1" />
+            <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-[11px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all">
+              <Trash2 className="w-4 h-4" /> Delete Permanently
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
 const MenuAction = ({ icon, label, onClick }: { icon: any; label: string; onClick: () => void }) => (
-  <button onClick={(e) => { e.stopPropagation(); onClick(); }} className="w-full flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 transition-all">
+  <button onClick={(e) => { e.stopPropagation(); onClick(); }} className="w-full flex items-center gap-4 p-4 lg:p-3.5 rounded-2xl lg:rounded-none bg-slate-50 lg:bg-transparent dark:bg-white/5 border border-slate-100 lg:border-0 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 transition-all">
     {icon}
     <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">{label}</span>
   </button>

@@ -50,7 +50,7 @@ def get_current_user(
 def get_current_active_admin(
     current_user: models.User = Depends(get_current_user),
 ) -> models.User:
-    if current_user.role != "admin":
+    if current_user.role not in ["admin", "executive"]:
         raise HTTPException(
             status_code=403, detail="The user doesn't have enough privileges"
         )

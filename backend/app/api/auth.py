@@ -77,7 +77,11 @@ def update_user_status(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    user.status = payload.get("status", user.status)
+    if "status" in payload:
+        user.status = payload["status"]
+    if "role" in payload:
+        user.role = payload["role"]
+        
     db.add(user)
     db.commit()
     db.refresh(user)

@@ -92,12 +92,13 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     { icon: FolderOpen, label: "Projects", to: "/projects", mobile: true },
     { icon: Bolt, label: "Activity", to: "/activity", mobile: true },
     { icon: Coins, label: "Spend", to: "/expenditure", mobile: true },
-    { icon: Plus, label: "Setup", to: "/setup", roles: ['admin', 'pm'] },
+    { icon: Plus, label: "Setup", to: "/setup", roles: ['admin', 'pm', 'executive'] },
     { icon: AlertTriangle, label: "Risks", to: "/risks" },
     { icon: Folder, label: "Repository", to: "/repository" },
-    { icon: Activity, label: "Monitoring", to: "/monitoring", roles: ['admin', 'executive'] },
-    { icon: ShieldCheck, label: "Settings", to: "/settings", roles: ['admin'] },
-    { icon: Settings, label: "Admin", to: "/admin", roles: ['admin'] },
+    {icon: Activity, label: "Monitoring", to: "/monitoring", roles: ['admin', 'executive'] },
+    {icon: ShieldCheck, label: "Settings", to: "/settings", roles: ['admin', 'executive'] },
+    {icon: Settings, label: "Admin", to: "/admin", roles: ['admin', 'executive'] },
+
   ];
 
   const primaryNav = navItems.filter(item => item.mobile);

@@ -137,13 +137,17 @@ def update_project(
 
 @router.delete("/{project_id}/", status_code=status.HTTP_204_NO_CONTENT)
 def delete_project(
-    project_id: int, 
+    project_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_admin)
 ):
     project = db.query(Project).filter(Project.project_id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # Implementation: Full cascading cleanup or logical delete
+    # For a real system we usually use CASCADE in DB schema, but we'll ensure commit
     db.delete(project)
     db.commit()
     return None
+

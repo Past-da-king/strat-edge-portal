@@ -15,13 +15,10 @@ import { Overview } from './pages/Overview'
 
 const PrivateRoute = ({ children, roles }: { children: React.ReactNode, roles?: string[] }) => {
   const userStr = localStorage.getItem('user');
-  console.log("DEBUG: PrivateRoute checking user:", userStr);
   if (!userStr) return <Navigate to="/login" />;
   
   const user = JSON.parse(userStr);
-  console.log("DEBUG: PrivateRoute checking role:", user.role, "against expected:", roles);
   if (roles && !roles.includes(user.role)) {
-    console.log("DEBUG: Access denied, redirecting to root");
     return <Navigate to="/" />;
   }
   
@@ -75,7 +72,7 @@ function App() {
         } />
 
         <Route path="/setup" element={
-          <PrivateRoute roles={['admin', 'pm']}>
+          <PrivateRoute roles={['admin', 'pm', 'executive']}>
             <DashboardLayout>
               <ProjectSetup />
             </DashboardLayout>
@@ -99,7 +96,7 @@ function App() {
         } />
 
         <Route path="/admin" element={
-          <PrivateRoute roles={['admin']}>
+          <PrivateRoute roles={['admin', 'executive']}>
             <DashboardLayout>
               <AdminPanel />
             </DashboardLayout>
@@ -107,7 +104,7 @@ function App() {
         } />
 
         <Route path="/settings" element={
-          <PrivateRoute roles={['admin']}>
+          <PrivateRoute roles={['admin', 'executive']}>
             <DashboardLayout>
               <AdminSettings />
             </DashboardLayout>

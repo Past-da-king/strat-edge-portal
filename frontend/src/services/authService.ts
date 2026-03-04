@@ -60,6 +60,11 @@ export const updateUserStatus = async (userId: number, status: string) => {
   return response.data;
 };
 
+export const updateUserRole = async (userId: number, role: string) => {
+  const response = await api.put(`auth/users/${userId}/status/`, { role });
+  return response.data;
+};
+
 export const createUser = async (userData: any) => {
   const response = await api.post(`auth/users/`, userData);
   return response.data;
@@ -71,6 +76,7 @@ const authService = {
   getCurrentUser,
   getUsers,
   updateUserStatus,
+  updateUserRole,
   createUser
 };
 

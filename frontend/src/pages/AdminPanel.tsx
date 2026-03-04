@@ -14,7 +14,9 @@ import {
   AlertOctagon,
   Loader2,
   Activity,
-  Fingerprint
+  Fingerprint,
+  Key,
+  X
 } from 'lucide-react';
 import api from '../services/api';
 import projectService from '../services/projectService';
@@ -35,8 +37,20 @@ export const AdminPanel: React.FC = () => {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  
+  // Toast State
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const triggerToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ show: true, message: msg, type });
+    setTimeout(() => setToast({ ...toast, show: false }), 4000);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -59,27 +73,50 @@ export const AdminPanel: React.FC = () => {
     fetchData();
   }, [activeTab]);
 
+  const handleRoleUpdate = async (userId: number, newRole: string) => {
+    try {
+      console.log(`Updating user ${userId} to role: ${newRole}`);
+      await authService.updateUserRole(userId, newRole);
+      triggerToast(`Account access updated to ${newRole.toUpperCase()}`);
+      fetchData();
+    } catch (err: any) {
+      console.error('Role update failed:', err.response?.data || err.message);
+      triggerToast('Security update rejected by server', 'error');
+    }
+  };
+
   const handleBackup = async () => {
     try {
       await projectService.downloadFullBackup();
+      triggerToast('System backup established');
     } catch (err) {
-      alert('Backup failed');
+      triggerToast('Backup sequence failed', 'error');
     }
   };
 
   const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    // We keep confirm() for destructive actions as it's a safety standard, 
+    // but we can wrap it in a custom modal later if desired.
     if (!confirm("RESTORE WARNING: This will overwrite the current database and all files. Proceed?")) return;
     
     try {
       await projectService.restoreBackup(file);
-      alert('System restored successfully. Refreshing...');
-      window.location.reload();
+      triggerToast('System restored successfully');
+      setTimeout(() => window.location.reload(), 1500);
     } catch (err) {
-      alert('Restore failed');
+      triggerToast('Restore operation failed', 'error');
     }
   };
+
+  const roleOptions = [
+    { value: 'admin', label: 'ADMIN' },
+    { value: 'pm', label: 'PM' },
+    { value: 'team', label: 'TEAM' },
+    { value: 'executive', label: 'EXECUTIVE' }
+  ];
 
   return (
     <div className="p-8">
@@ -99,7 +136,7 @@ export const AdminPanel: React.FC = () => {
         <TabButton active={activeTab === 'database'} onClick={() => setActiveTab('database')} icon={<Database className="w-4 h-4" />} label="SYSTEM LIFECYCLE" />
       </div>
 
-      <div className="glass rounded-[2.5rem] p-10 border border-slate-200 dark:border-white/5 shadow-2xl min-h-[600px]">
+      <div className="glass rounded-[2.5rem] p-6 lg:p-10 border border-slate-200 dark:border-white/5 shadow-2xl min-h-[600px]">
         {activeTab === 'users' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex justify-between items-end border-b border-slate-200 dark:border-white/5 pb-8">
@@ -117,7 +154,7 @@ export const AdminPanel: React.FC = () => {
 
             <div className="grid grid-cols-1 gap-4">
               {users.map((user) => (
-                <div key={user.user_id} className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-white/[0.07] transition-all group shadow-sm">
+                <div key={user.user_id} className="bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between hover:bg-slate-100 dark:hover:bg-white/[0.07] transition-all group shadow-sm gap-6">
                   <div className="flex items-center gap-5">
                     <div className="w-12 h-12 bg-slate-200 dark:bg-black/40 rounded-full flex items-center justify-center border border-slate-300 dark:border-white/10 text-slate-500 dark:text-slate-400 font-black text-lg">
                       {user.full_name?.charAt(0)}
@@ -126,46 +163,51 @@ export const AdminPanel: React.FC = () => {
                       <p className="font-black text-slate-900 dark:text-white text-lg tracking-tight uppercase">{user.full_name}</p>
                       <div className="flex items-center gap-3 mt-1">
                         <span className="text-[10px] font-bold text-slate-500 font-mono tracking-widest underline decoration-accent-primary/30 underline-offset-4">@{user.username}</span>
-                        <span className="w-1 h-1 bg-slate-200 dark:bg-white/10 rounded-full" />
-                        <span className="text-[9px] font-black text-accent-secondary uppercase tracking-widest px-2 py-0.5 bg-accent-secondary/10 rounded border border-accent-secondary/20">{user.role}</span>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-4">
-                    <div className="text-right mr-4 hidden md:block">
+                  <div className="flex flex-wrap items-center gap-6">
+                    {/* Role Selection */}
+                    <div className="w-48">
+                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Access Level</p>
+                      <CustomSelect 
+                        value={user.role}
+                        onChange={(val) => handleRoleUpdate(user.user_id, val)}
+                        options={roleOptions}
+                      />
+                    </div>
+
+                    <div className="text-right hidden md:block">
                       <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Status</p>
                       <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${user.status === 'approved' || user.status === 'active' ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-500'}`}>
                         {user.status}
                       </span>
                     </div>
-                    <button 
-                      onClick={async () => {
-                        const newStatus = user.status === 'approved' ? 'disabled' : 'approved';
-                        await authService.updateUserStatus(user.user_id, newStatus);
-                        fetchData();
-                      }}
-                      className={`p-3 rounded-xl border transition-all duration-500 ${
-                        user.status === 'approved' || user.status === 'active'
-                          ? 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-500 hover:bg-rose-600 hover:text-white' 
-                          : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-600 hover:text-white'
-                      }`}
-                      title={user.status === 'approved' ? "Disable User" : "Enable User"}
-                    >
-                      {user.status === 'approved' || user.status === 'active' ? <XCircle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
-                    </button>
-                    <button className="p-3 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-rose-500 transition-all">
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+
+                    <div className="flex gap-2 self-end md:self-center">
+                      <button 
+                        onClick={async () => {
+                          const newStatus = user.status === 'approved' ? 'disabled' : 'approved';
+                          await authService.updateUserStatus(user.user_id, newStatus);
+                          fetchData();
+                        }}
+                        className={`p-3 rounded-xl border transition-all duration-500 ${
+                          user.status === 'approved' || user.status === 'active'
+                            ? 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-500 hover:bg-rose-600 hover:text-white' 
+                            : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-600 hover:text-white'
+                        }`}
+                        title={user.status === 'approved' ? "Disable User" : "Enable User"}
+                      >
+                        {user.status === 'approved' || user.status === 'active' ? <XCircle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+                      </button>
+                      <button className="p-3 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-rose-500 transition-all">
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
-              {users.length === 0 && !loading && (
-                <div className="py-20 text-center glass rounded-[2rem] border border-dashed border-slate-200 dark:border-white/5 opacity-30">
-                  <Users className="w-16 h-16 mx-auto mb-4 text-slate-400 dark:text-slate-500" />
-                  <p className="text-xl font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">No Identities Found</p>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -176,8 +218,8 @@ export const AdminPanel: React.FC = () => {
                 <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">System Audit Trail</h3>
                 <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Immutable record of all platform operations</p>
               </div>
-            <div className="bg-slate-50 dark:bg-black/20 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-inner">
-              <table className="w-full text-left border-collapse">
+            <div className="bg-slate-50 dark:bg-black/20 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-inner overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5">
                     <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Timestamp</th>
@@ -239,7 +281,7 @@ export const AdminPanel: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full bg-rose-600/10 hover:bg-rose-600 text-rose-600 dark:text-rose-500 hover:text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all border border-rose-500/20 group-hover:shadow-2xl group-hover:shadow-accent-primary/20"
+                  className="w-full bg-rose-600/10 hover:bg-rose-600 text-rose-600 dark:text-rose-500 hover:text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all border border-rose-500/20 group-hover:shadow-2xl group-hover:shadow-rose-600/20"
                 >
                   Initiate Restore
                 </button>
@@ -291,14 +333,6 @@ export const AdminPanel: React.FC = () => {
                 />
               </div>
             </div>
-
-            <div className="p-6 border border-indigo-500/10 rounded-2xl bg-indigo-500/5">
-              <div className="flex items-center gap-3 text-indigo-600 dark:text-indigo-400 mb-2">
-                <AlertOctagon className="w-4 h-4" />
-                <span className="text-[9px] font-black uppercase tracking-widest">Warning Protocol</span>
-              </div>
-              <p className="text-[10px] text-slate-500 font-medium leading-relaxed">Credential generation triggers a permanent entry in the system audit trail. Ensure all information matches legal identification.</p>
-            </div>
           </div>
 
           {/* Right Panel: The Form */}
@@ -318,6 +352,22 @@ export const AdminPanel: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* --- SUCCESS TOAST --- */}
+      {toast.show && (
+        <div className="fixed bottom-10 right-10 z-[200] animate-in slide-in-from-right duration-500">
+          <div className={`${toast.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'} text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/10`}>
+            {toast.type === 'success' ? <CheckCircle2 className="w-6 h-6" /> : <AlertOctagon className="w-6 h-6" />}
+            <div>
+              <p className="font-black uppercase tracking-widest text-[10px]">{toast.type === 'success' ? 'Operation Success' : 'Security Alert'}</p>
+              <p className="text-xs font-bold opacity-90 tracking-tight">{toast.message}</p>
+            </div>
+            <button onClick={() => setToast({ ...toast, show: false })} className="ml-4 p-1 hover:bg-white/10 rounded-lg transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -436,7 +486,7 @@ const AddUserForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
             </>
           )}
         </button>
-        <p className="text-center text-[8px] font-black text-slate-600 uppercase tracking-[0.3em] mt-6 opacity-50 italic">
+        <p className="text-center text-[8px] font-black text-slate-500 uppercase tracking-[0.3em] mt-6 opacity-50 italic">
           Authorized personnel only. All registration events are logged.
         </p>
       </div>
