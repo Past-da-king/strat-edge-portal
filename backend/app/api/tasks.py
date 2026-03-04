@@ -97,6 +97,7 @@ def delete_task(
 @router.get("/output/{output_id}/blob/")
 def get_output_blob_info(
     output_id: int, 
+    inline: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -104,8 +105,8 @@ def get_output_blob_info(
     if not output:
         raise HTTPException(status_code=404, detail="Output not found")
     
-    # Generate signed URL
-    signed_url = StorageService.get_signed_url(output.file_path)
+    # Generate signed URL with correct disposition
+    signed_url = StorageService.get_signed_url(output.file_path, inline=inline)
     
     from ..core.audit import log_event
     log_event(

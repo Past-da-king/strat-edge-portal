@@ -52,16 +52,18 @@ export const DenseCell: React.FC<{
   flex?: number; 
   align?: 'left'|'center'|'right';
   label?: string; 
+  onClick?: () => void;
 }> = ({ 
-  children, flex = 1, align = 'left', label 
+  children, flex = 1, align = 'left', label, onClick
 }) => {
   const alignmentClass = align === 'right' ? 'lg:text-right' : align === 'center' ? 'lg:text-center' : 'lg:text-left';
   const justifyClass = align === 'right' ? 'lg:justify-end' : align === 'center' ? 'lg:justify-center' : 'lg:justify-start';
   
   return (
     <div 
-      className={`flex flex-col lg:flex lg:flex-row px-0 lg:px-4 mb-3 last:mb-0 lg:mb-0 ${alignmentClass} ${justifyClass}`}
+      className={`flex flex-col lg:flex lg:flex-row px-0 lg:px-4 mb-3 last:mb-0 lg:mb-0 ${alignmentClass} ${justifyClass} ${onClick ? 'cursor-pointer' : ''}`}
       style={{ flex: flex }}
+      onClick={onClick}
     >
       {label && (
         <span className="lg:hidden text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mb-1.5">

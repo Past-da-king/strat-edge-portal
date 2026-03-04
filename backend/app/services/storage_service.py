@@ -40,20 +40,25 @@ class StorageService:
         return destination_path
 
     @classmethod
-    def get_signed_url(cls, file_path: str, expiration_minutes: int = 60) -> str:
+    def get_signed_url(cls, file_path: str, expiration_minutes: int = 60, inline: bool = False) -> str:
         """
         Generates a temporary signed URL for secure access to a private file.
+        If inline is True, the file will be viewable in-browser rather than downloaded.
         """
         client = cls.get_client()
         bucket = client.bucket(settings.GCP_BUCKET_NAME)
         blob = bucket.blob(file_path)
 
+        disposition = "inline" if inline else "attachment"
+
         url = blob.generate_signed_url(
             version="v4",
             expiration=timedelta(minutes=expiration_minutes),
             method="GET",
+            response_disposition=f"{disposition}; filename=\"{os.path.basename(file_path)}\""
         )
         return url
+
 
     @classmethod
     def delete_file(cls, file_path: str):

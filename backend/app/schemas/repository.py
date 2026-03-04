@@ -60,6 +60,18 @@ class FileRecord(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class SearchResult(BaseModel):
+    id: int
+    name: str
+    type: str # 'deliverable' or 'personal'
+    context: str # task name or folder path
+
+class RelatedFile(BaseModel):
+    id: int
+    name: str
+    type: str
+    link_id: int
+
 class RiskProofBase(BaseModel):
     file_name: str
     file_path: str
