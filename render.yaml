@@ -19,9 +19,9 @@ services:
       - key: GOOGLE_APPLICATION_CREDENTIALS
         value: /etc/secrets/gcp-credentials.json
 
+staticSites:
   # 2. Frontend (React Static Site)
-  - type: static
-    name: strat-edge-portal
+  - name: strat-edge-portal
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     rootDir: frontend
