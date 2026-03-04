@@ -100,21 +100,21 @@ export const RecordExpenditure: React.FC = () => {
           <Coins className="w-7 h-7 text-emerald-500" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Record Expenditure</h1>
-          <p className="text-slate-400">Log project costs against specific activities or overheads.</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Record Expenditure</h1>
+          <p className="text-slate-500 dark:text-slate-400">Log project costs against specific activities or overheads.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1 space-y-6">
-          <div className="glass rounded-3xl p-8 border-l-4 border-l-emerald-500">
-            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+          <div className="glass rounded-3xl p-8 border-l-4 border-l-emerald-500 shadow-xl">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
               <Plus className="w-5 h-5 text-emerald-500" /> New Transaction
             </h3>
             
             <form onSubmit={handleSubmit} className="space-y-6">
               {success && (
-                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
                   <CheckCircle2 className="w-4 h-4" /> {success}
                 </div>
               )}
@@ -149,7 +149,7 @@ export const RecordExpenditure: React.FC = () => {
                     type="number" 
                     value={formData.amount} 
                     onChange={(e) => setFormData({...formData, amount: Number(e.target.value)})}
-                    className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all font-bold text-sm" 
+                    className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all font-bold text-sm" 
                     required 
                   />
                 </div>
@@ -161,7 +161,7 @@ export const RecordExpenditure: React.FC = () => {
                   type="date" 
                   value={formData.spend_date} 
                   onChange={(e) => setFormData({...formData, spend_date: e.target.value})}
-                  className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all font-bold text-sm" 
+                  className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all font-bold text-sm" 
                   required 
                 />
               </div>
@@ -172,7 +172,7 @@ export const RecordExpenditure: React.FC = () => {
                   type="text" 
                   value={formData.reference_id} 
                   onChange={(e) => setFormData({...formData, reference_id: e.target.value})}
-                  className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all font-bold text-sm" 
+                  className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all font-bold text-sm" 
                   placeholder="e.g. INV-9901"
                   required 
                 />
@@ -190,8 +190,8 @@ export const RecordExpenditure: React.FC = () => {
         </div>
 
         <div className="lg:col-span-2 space-y-6">
-          <div className="glass rounded-[2rem] p-10 border border-white/5">
-            <h3 className="text-lg font-black text-white mb-8 flex items-center gap-3 uppercase tracking-widest opacity-50 text-xs">
+          <div className="glass rounded-[2rem] p-10 border border-slate-200 dark:border-white/5 shadow-2xl">
+            <h3 className="text-lg font-black text-slate-900 dark:text-white mb-8 flex items-center gap-3 uppercase tracking-widest opacity-50 text-xs">
               <History className="w-5 h-5 text-accent-primary" /> 
               Full Transaction History
             </h3>
@@ -202,29 +202,29 @@ export const RecordExpenditure: React.FC = () => {
                   <DenseRow key={exp.exp_id}>
                     <DenseCell>
                       <div className="flex items-center gap-2 py-3">
-                        <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                        <span className="text-xs font-mono text-slate-400">{exp.spend_date}</span>
+                        <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                        <span className="text-xs font-mono text-slate-500 dark:text-slate-400">{exp.spend_date}</span>
                       </div>
                     </DenseCell>
                     <DenseCell>
                       <div className="flex items-center gap-2">
                         <Tag className="w-3.5 h-3.5 text-accent-primary opacity-50" />
-                        <span className="text-[10px] font-black text-slate-200 uppercase tracking-widest">{exp.category}</span>
+                        <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest">{exp.category}</span>
                       </div>
                     </DenseCell>
                     <DenseCell>
                       <div className="flex items-center gap-2">
-                        <Hash className="w-3.5 h-3.5 text-slate-500" />
+                        <Hash className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                         <span className="text-xs font-mono text-slate-500">{exp.reference_id}</span>
                       </div>
                     </DenseCell>
                     <DenseCell align="right">
-                      <span className="text-base font-black text-white font-mono">R {exp.amount.toLocaleString()}</span>
+                      <span className="text-base font-black text-slate-900 dark:text-white font-mono">R {exp.amount.toLocaleString()}</span>
                     </DenseCell>
                   </DenseRow>
                 ))}
                 {expenditures.length === 0 && (
-                  <div className="py-20 text-center text-slate-500 italic uppercase font-black tracking-widest opacity-30 text-xl">
+                  <div className="py-20 text-center text-slate-400 dark:text-slate-500 italic uppercase font-black tracking-[0.5em] opacity-20 text-xl">
                     No Records
                   </div>
                 )}

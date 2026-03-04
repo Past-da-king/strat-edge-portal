@@ -118,6 +118,37 @@ def get_output_blob_info(
     
     return {"file_name": output.file_name, "signed_url": signed_url}
 
+@router.delete("/output/{output_id}/", status_code=status.HTTP_204_NO_CONTENT)
+def delete_task_output(
+    output_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    output = db.query(TaskOutput).filter(TaskOutput.output_id == output_id).first()
+    if not output:
+        raise HTTPException(status_code=404, detail="Output not found")
+    
+    # 1. Delete from GCS
+    try:
+        StorageService.delete_file(output.file_path)
+    except Exception as e:
+        print(f"Warning: Failed to delete file from storage: {str(e)}")
+    
+    # 2. Log Audit
+    from ..core.audit import log_event
+    log_event(
+        db,
+        event_type="DELETE",
+        category="FILE",
+        description=f"Permanently deleted file: {output.file_name}",
+        user_id=current_user.user_id
+    )
+    
+    # 3. Delete from DB
+    db.delete(output)
+    db.commit()
+    return None
+
 from ..services.storage_service import StorageService
 
 @router.post("/{task_id}/upload/")

@@ -61,3 +61,4 @@ coverage/
 *.bak
 *.tmp
 .cache/
+docs/

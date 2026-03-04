@@ -175,29 +175,29 @@ export const ProjectSetup: React.FC = () => {
           <Settings2 className="w-7 h-7 text-accent-primary" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Project Administration</h1>
-          <p className="text-slate-400">Configure project structures, manage dependencies, and control team access.</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Project Administration</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Configure project structures, manage dependencies, and control team access.</p>
         </div>
       </div>
 
-      <div className="flex gap-4 mb-8">
+      <div className="flex gap-4 mb-8 overflow-x-auto pb-2 custom-scrollbar">
         <TabButton active={activeTab === 'manual'} onClick={() => setActiveTab('manual')} icon={<Plus className="w-4 h-4" />} label="CREATE PROJECT" />
         <TabButton active={activeTab === 'import'} onClick={() => setActiveTab('import')} icon={<FileSpreadsheet className="w-4 h-4" />} label="EXCEL IMPORT" />
         <TabButton active={activeTab === 'manage'} onClick={() => setActiveTab('manage')} icon={<Layout className="w-4 h-4" />} label="MANAGE PLAN" />
       </div>
 
       {success && (
-        <div className="mb-8 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+        <div className="mb-8 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-600 dark:text-emerald-400 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 font-bold uppercase text-[10px] tracking-widest">
           <CheckCircle2 className="w-5 h-5" /> {success}
         </div>
       )}
       {error && (
-        <div className="mb-8 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+        <div className="mb-8 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 font-bold uppercase text-[10px] tracking-widest">
           <AlertTriangle className="w-5 h-5" /> {error}
         </div>
       )}
 
-      <div className="glass rounded-3xl p-8 overflow-hidden">
+      <div className="glass rounded-3xl p-8 overflow-hidden shadow-2xl">
         {activeTab === 'manual' && (
           <form onSubmit={handleManualSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl">
             <div className="space-y-6">
@@ -216,7 +216,7 @@ export const ProjectSetup: React.FC = () => {
                   <select 
                     value={formData.pm_user_id} 
                     onChange={e => setFormData({...formData, pm_user_id: Number(e.target.value)})}
-                    className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20"
+                    className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all font-bold"
                   >
                     <option value={0}>Select PM...</option>
                     {users.filter(u => u.role === 'pm' || u.role === 'admin').map(u => (
@@ -227,7 +227,7 @@ export const ProjectSetup: React.FC = () => {
               ) : (
                 <div className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-xl">
                   <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Project Assignment</p>
-                  <p className="text-white font-bold text-sm">Will be assigned to you as PM.</p>
+                  <p className="text-slate-900 dark:text-white font-bold text-sm">Will be assigned to you as PM.</p>
                 </div>
               )}
             </div>
@@ -245,18 +245,18 @@ export const ProjectSetup: React.FC = () => {
               <div className="w-20 h-20 bg-accent-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
                 <FileSpreadsheet className="w-10 h-10 text-accent-primary" />
               </div>
-              <h3 className="text-2xl font-black text-white uppercase tracking-tight">Structured Excel Ingestion</h3>
-              <p className="text-slate-400">Download our master template to prepare your project phases, dependencies, and resource allocations for bulk synchronization.</p>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Structured Excel Ingestion</h3>
+              <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Download our master template to prepare your project phases, dependencies, and resource allocations for bulk synchronization.</p>
               <div className="pt-4">
-                <button className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-xl font-bold transition-all border border-white/10 flex items-center gap-3 mx-auto uppercase text-xs tracking-widest">
+                <button className="bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-900 dark:text-white px-8 py-4 rounded-xl font-bold transition-all border border-slate-200 dark:border-white/10 flex items-center gap-3 mx-auto uppercase text-xs tracking-widest">
                   <Download className="w-4 h-4" /> Download Baseline Template
                 </button>
               </div>
             </div>
-            <div className="relative border-2 border-dashed border-white/5 rounded-[2.5rem] p-20 hover:border-accent-primary/30 transition-all cursor-pointer group bg-black/20">
+            <div className="relative border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[2.5rem] p-20 hover:border-accent-primary/30 transition-all cursor-pointer group bg-slate-50 dark:bg-black/20 shadow-inner">
               <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept=".xlsx" />
-              <Upload className="w-12 h-12 text-slate-600 mx-auto mb-4 group-hover:text-accent-primary transition-colors" />
-              <p className="text-slate-300 font-black uppercase tracking-widest text-xs">Drop excel here or click to browse</p>
+              <Upload className="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-4 group-hover:text-accent-primary transition-colors" />
+              <p className="text-slate-500 dark:text-slate-300 font-black uppercase tracking-widest text-xs">Drop excel here or click to browse</p>
             </div>
           </div>
         )}
@@ -273,7 +273,7 @@ export const ProjectSetup: React.FC = () => {
                 />
               </div>
               <div className="flex gap-3">
-                <button onClick={handleAddTaskRow} className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all">
+                <button onClick={handleAddTaskRow} className="px-6 py-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-white/10 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all">
                   <Plus className="w-4 h-4" /> Add Activity
                 </button>
                 <button onClick={handleSavePlan} disabled={loading} className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl shadow-emerald-600/20">
@@ -282,32 +282,32 @@ export const ProjectSetup: React.FC = () => {
               </div>
             </div>
 
-            <div className="border border-white/5 rounded-2xl bg-black/20">
+            <div className="border border-slate-200 dark:border-white/5 rounded-2xl bg-slate-50 dark:bg-black/20 overflow-hidden shadow-inner">
               {isPlanLoading ? (
                 <div className="py-40 text-center"><Loader2 className="w-12 h-12 text-accent-primary animate-spin mx-auto opacity-20" /></div>
               ) : (
                 <div className="overflow-x-auto custom-scrollbar min-h-[400px]">
                   <table className="w-full text-left border-collapse">
-                    <thead className="bg-white/5">
+                    <thead className="bg-slate-100 dark:bg-white/5">
                       <tr>
-                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">Activity Name</th>
-                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">Responsible</th>
-                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">Start Date</th>
-                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">End Date</th>
-                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">Budget (R)</th>
-                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">Predecessor</th>
-                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">Status</th>
-                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5"></th>
+                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Activity Name</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Responsible</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Start Date</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">End Date</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Budget (R)</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Predecessor</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Status</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5">
+                    <tbody className="divide-y divide-slate-200 dark:divide-white/5">
                       {planTasks.map((task, idx) => (
-                        <tr key={task.activity_id} className="hover:bg-white/[0.02] transition-colors group">
+                        <tr key={task.activity_id} className="hover:bg-slate-100 dark:hover:bg-white/[0.02] transition-colors group">
                           <td className="p-2">
                             <input 
                               type="text" value={task.activity_name} 
                               onChange={e => handleUpdateTaskField(idx, 'activity_name', e.target.value)}
-                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-accent-primary/50 rounded px-2 py-2 text-sm text-white font-bold uppercase" 
+                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-accent-primary/50 rounded px-2 py-2 text-sm text-slate-900 dark:text-white font-bold uppercase" 
                               placeholder="Phase title..."
                             />
                           </td>
@@ -326,21 +326,21 @@ export const ProjectSetup: React.FC = () => {
                             <input 
                               type="date" value={task.planned_start} 
                               onChange={e => handleUpdateTaskField(idx, 'planned_start', e.target.value)}
-                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-accent-primary/50 rounded px-2 py-2 text-xs text-slate-400 font-mono" 
+                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-accent-primary/50 rounded px-2 py-2 text-xs text-slate-500 dark:text-slate-400 font-mono" 
                             />
                           </td>
                           <td className="p-2">
                             <input 
                               type="date" value={task.planned_finish} 
                               onChange={e => handleUpdateTaskField(idx, 'planned_finish', e.target.value)}
-                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-accent-primary/50 rounded px-2 py-2 text-xs text-slate-400 font-mono" 
+                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-accent-primary/50 rounded px-2 py-2 text-xs text-slate-500 dark:text-slate-400 font-mono" 
                             />
                           </td>
                           <td className="p-2 w-32">
                             <input 
                               type="number" value={task.budgeted_cost} 
                               onChange={e => handleUpdateTaskField(idx, 'budgeted_cost', Number(e.target.value))}
-                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-accent-primary/50 rounded px-2 py-2 text-sm text-white font-mono font-bold" 
+                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-accent-primary/50 rounded px-2 py-2 text-sm text-slate-900 dark:text-white font-mono font-bold" 
                             />
                           </td>
                           <td className="p-2 w-56">
@@ -362,7 +362,7 @@ export const ProjectSetup: React.FC = () => {
                             />
                           </td>
                           <td className="p-2 text-right">
-                            <button onClick={() => handleRemoveTask(task.activity_id, idx)} className="p-2 text-slate-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
+                            <button onClick={() => handleRemoveTask(task.activity_id, idx)} className="p-2 text-slate-400 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </td>
@@ -371,7 +371,7 @@ export const ProjectSetup: React.FC = () => {
                     </tbody>
                   </table>
                   {planTasks.length === 0 && (
-                    <div className="py-20 text-center text-slate-700 uppercase font-black tracking-widest text-sm italic">Plan is currently empty. Initialize baseline below.</div>
+                    <div className="py-20 text-center text-slate-400 dark:text-slate-700 uppercase font-black tracking-widest text-sm italic">Plan is currently empty. Initialize baseline below.</div>
                   )}
                 </div>
               )}
@@ -388,10 +388,10 @@ export const ProjectSetup: React.FC = () => {
 const TabButton = ({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: any; label: string }) => (
   <button 
     onClick={onClick}
-    className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${
+    className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border whitespace-nowrap ${
       active 
         ? 'bg-accent-primary text-white border-accent-primary shadow-lg shadow-accent-primary/20' 
-        : 'bg-white/5 text-slate-500 border-white/5 hover:text-slate-300'
+        : 'bg-slate-100 dark:bg-white/5 text-slate-500 border-slate-200 dark:border-white/5 hover:text-slate-900 dark:hover:text-slate-300'
     }`}
   >
     {icon}
@@ -407,7 +407,7 @@ const Input = ({ label, value, onChange, type = 'text', required = false }: { la
       value={value} 
       onChange={e => onChange(e.target.value)}
       required={required}
-      className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3.5 text-sm text-white font-bold focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all"
+      className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3.5 text-sm text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700"
     />
   </div>
 );
