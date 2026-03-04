@@ -28,22 +28,16 @@ export const Login: React.FC = () => {
     }
   }, [isDark]);
 
-  const handleLogin = async () => {
-    console.log('Login trigger started');
-    alert('Login started for: ' + username);
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      console.log('Calling authService.login...');
-      const data = await authService.login(username, password);
-      console.log('authService.login returned data:', !!data);
-      alert('Login success! Redirecting to dashboard...');
+      await authService.login(username, password);
       navigate('/');
     } catch (err: any) {
-      console.error('Login Error caught in component:', err);
-      const detail = err.response?.data?.detail || err.message || 'Unknown network error';
+      const detail = err.response?.data?.detail || err.message || 'Login failed';
       setError(detail);
-      alert('Login Error: ' + detail);
     } finally {
       setLoading(false);
     }
@@ -51,10 +45,8 @@ export const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden transition-colors duration-300">
-      {/* Background Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-accent-primary/5 rounded-full blur-[120px] pointer-events-none" />
       
-      {/* Theme Toggle */}
       <button 
         onClick={() => setIsDark(!isDark)}
         className="absolute top-8 right-8 p-3 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-500 hover:text-accent-primary border border-slate-200 dark:border-white/10 transition-all"
@@ -74,14 +66,13 @@ export const Login: React.FC = () => {
         <div className="glass p-10 rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-2xl">
           <h2 className="text-xl font-black text-slate-900 dark:text-white mb-8 uppercase tracking-tight text-center">System Authentication</h2>
           
-          <div className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-6">
             <div>
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 px-1">Access Identity</label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                 className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-xl px-5 py-4 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all font-bold placeholder:text-slate-400 dark:placeholder:text-slate-700"
                 placeholder="Username"
                 required
@@ -95,7 +86,6 @@ export const Login: React.FC = () => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                   className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-xl px-5 py-4 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all font-bold placeholder:text-slate-400 dark:placeholder:text-slate-700"
                   placeholder="••••••••"
                   required
@@ -117,7 +107,7 @@ export const Login: React.FC = () => {
             )}
 
             <button
-              onClick={handleLogin}
+              type="submit"
               disabled={loading}
               className="w-full bg-accent-primary hover:bg-accent-secondary text-white font-black py-5 rounded-2xl transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-accent-primary/20 uppercase tracking-[0.2em] text-xs"
             >
@@ -128,7 +118,7 @@ export const Login: React.FC = () => {
                 </>
               )}
             </button>
-          </div>
+          </form>
         </div>
         
         <p className="mt-10 text-center text-slate-500 text-[9px] tracking-[0.3em] font-black uppercase opacity-50">
