@@ -24,7 +24,9 @@ import {
   Link2,
   Check,
   Plus,
-  Eye
+  Eye,
+  Clock,
+  User2
 } from 'lucide-react';
 import { DenseTable, DenseRow, DenseCell } from '../components/DenseTable';
 import { Modal } from '../components/Modal';
@@ -39,7 +41,7 @@ export const Repository: React.FC = () => {
   const [viewMode, setViewMode] = useState<'deliverables' | 'kb'>('deliverables');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeMenu, setActiveMenu] = useState<{ type: 'del' | 'kb', id: number } | null>(null);
+  const [activeMenu, setActiveMenu] = useState<{ type: 'del' | 'kb', id: number, name: string } | null>(null);
 
   // --- PREVIEW STATE ---
   const [preview, setPreview] = useState<{ isOpen: boolean; name: string; url: string }>({
@@ -60,7 +62,6 @@ export const Repository: React.FC = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
 
-  // --- MULTI-LINKING STATE ---
   const [linkModal, setLinkModal] = useState<{ 
     isOpen: boolean; 
     source: { type: string; id: number; name: string } | null;
@@ -158,7 +159,6 @@ export const Repository: React.FC = () => {
       }
     } catch (err) {
       console.error(err);
-      alert('Failed to load preview');
     } finally {
       setActiveMenu(null);
     }
@@ -243,6 +243,8 @@ export const Repository: React.FC = () => {
       setRelatedModal({ isOpen: true, file: { type, id, name }, related: res.data });
     } catch (err) {
       console.error(err);
+    } finally {
+      setActiveMenu(null);
     }
   };
 
@@ -320,7 +322,7 @@ export const Repository: React.FC = () => {
         </div>
       </div>
 
-      <div className="glass rounded-[2.5rem] p-6 lg:p-10 border border-slate-200 dark:border-white/5 shadow-2xl relative">
+      <div className="glass rounded-[2rem] lg:rounded-[2.5rem] p-6 lg:p-10 border border-slate-200 dark:border-white/5 shadow-2xl relative">
         {/* TOP TOOLBAR */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 pb-10 border-b border-slate-200 dark:border-white/5">
           <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap custom-scrollbar pb-2 lg:pb-0">
@@ -340,22 +342,61 @@ export const Repository: React.FC = () => {
           <DenseTable headers={['File Name', 'Date', 'User', 'Actions']}>
             {filteredDeliverables.map((file) => (
               <DenseRow key={file.output_id}>
-                <DenseCell flex={3} label="File" onClick={() => handlePreview('del', file.output_id, file.file_name)}>
+                <DenseCell flex={3} label="Asset Identity" onClick={() => handlePreview('del', file.output_id, file.file_name)}>
                   <div className="flex items-center gap-4 py-2 cursor-pointer group/file">
-                    <FileText className="w-5 h-5 text-slate-400 group-hover/file:text-accent-primary shrink-0 transition-colors" />
+                    <div className="w-10 h-10 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-500 border border-slate-200 dark:border-white/5 shrink-0 group-hover/file:border-accent-primary transition-all">
+                      <FileText className="w-5 h-5 group-hover/file:text-accent-primary transition-colors" />
+                    </div>
                     <div className="min-w-0">
                       <p className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight truncate max-w-sm group-hover/file:text-accent-primary transition-colors">{file.file_name}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[8px] font-black text-accent-primary uppercase tracking-widest bg-accent-primary/5 px-2 py-0.5 rounded border border-accent-primary/10">{file.doc_type}</span>
-                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">Task: {file.task_name}</span>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><ArrowUpRight className="w-3 h-3 text-indigo-500" /> {file.task_name}</span>
                       </div>
                     </div>
                   </div>
                 </DenseCell>
-                <DenseCell label="Date"><span className="text-[10px] font-mono text-slate-500 uppercase">{new Date(file.upload_date).toLocaleDateString()}</span></DenseCell>
-                <DenseCell label="User"><div className="flex items-center gap-2"><div className="w-6 h-6 bg-indigo-500/10 rounded-full flex items-center justify-center text-[10px] font-black text-indigo-500 uppercase">{file.uploader_name?.charAt(0)}</div><span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase truncate max-w-[100px]">{file.uploader_name}</span></div></DenseCell>
-                <DenseCell align="right">
-                  <ActionMenu type="del" id={file.output_id} name={file.file_name} activeMenu={activeMenu} setActiveMenu={setActiveMenu} onDownload={() => handleDownload('del', file.output_id)} onPreview={() => handlePreview('del', file.output_id, file.file_name)} onDelete={() => setDeleteConfirm({ isOpen: true, id: file.output_id, name: file.file_name, type: 'del' })} onLink={() => setLinkModal({ isOpen: true, source: { type: 'deliverable', id: file.output_id, name: file.file_name }, selectedTargets: [] })} onViewRelated={() => handleViewRelated('deliverable', file.output_id, file.file_name)} />
+                
+                {/* Desktop-only date/user cells */}
+                <DenseCell label="Archived Date" className="hidden lg:flex">
+                  <div className="flex items-center gap-2 text-slate-500 font-mono text-[10px]">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {new Date(file.upload_date).toLocaleDateString()}
+                  </div>
+                </DenseCell>
+                
+                <DenseCell label="Execution Operator" className="hidden lg:flex">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 bg-indigo-500/10 rounded-full flex items-center justify-center text-[10px] font-black text-indigo-500 uppercase border border-indigo-500/10">
+                      {file.uploader_name?.charAt(0)}
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter truncate max-w-[100px]">{file.uploader_name}</span>
+                  </div>
+                </DenseCell>
+
+                {/* Mobile-integrated metadata */}
+                <div className="lg:hidden flex items-center gap-6 mt-4 pt-4 border-t border-slate-100 dark:border-white/5 opacity-60 px-1">
+                  <div className="flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                    <Clock className="w-3 h-3" /> {new Date(file.upload_date).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                    <User2 className="w-3 h-3" /> {file.uploader_name}
+                  </div>
+                </div>
+
+                <DenseCell align="right" label="Action">
+                  <ActionMenu 
+                    type="del" 
+                    id={file.output_id} 
+                    name={file.file_name} 
+                    activeMenu={activeMenu} 
+                    setActiveMenu={setActiveMenu} 
+                    onDownload={() => handleDownload('del', file.output_id)} 
+                    onPreview={() => handlePreview('del', file.output_id, file.file_name)} 
+                    onDelete={() => setDeleteConfirm({ isOpen: true, id: file.output_id, name: file.file_name, type: 'del' })} 
+                    onLink={() => setLinkModal({ isOpen: true, source: { type: 'deliverable', id: file.output_id, name: file.file_name }, selectedTargets: [] })} 
+                    onViewRelated={() => handleViewRelated('deliverable', file.output_id, file.file_name)} 
+                  />
                 </DenseCell>
               </DenseRow>
             ))}
@@ -369,24 +410,34 @@ export const Repository: React.FC = () => {
               </div>
             )}
             {kbItems.map((item) => (
-              <div key={item.file_id} onDoubleClick={() => item.is_folder ? navigateToFolder(item) : handlePreview('kb', item.file_id, item.name)} className="flex items-center justify-between p-4 bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 rounded-2xl hover:border-accent-primary/30 hover:shadow-xl transition-all group cursor-pointer">
+              <div key={item.file_id} className="flex items-center justify-between p-4 bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 rounded-2xl hover:border-accent-primary/30 hover:shadow-xl transition-all group cursor-pointer">
                 <div className="flex items-center gap-4 min-w-0" onClick={() => item.is_folder ? navigateToFolder(item) : handlePreview('kb', item.file_id, item.name)}>
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center border flex-shrink-0 ${item.is_folder ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500' : 'bg-slate-100 dark:bg-black/40 border-slate-200 dark:border-white/10 text-slate-400'}`}>
                     {item.is_folder ? <Folder className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
                   </div>
                   <p className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight truncate pr-2">{item.name}</p>
                 </div>
-                <ActionMenu type="kb" id={item.file_id} name={item.name} activeMenu={activeMenu} setActiveMenu={setActiveMenu} onDownload={() => handleDownload('kb', item.file_id)} onPreview={() => handlePreview('kb', item.file_id, item.name)} onDelete={() => setDeleteConfirm({ isOpen: true, id: item.file_id, name: item.name, type: 'kb' })} onLink={() => setLinkModal({ isOpen: true, source: { type: 'personal', id: item.file_id, name: item.name }, selectedTargets: [] })} onViewRelated={() => handleViewRelated('personal', item.file_id, item.name)} />
+                <ActionMenu 
+                  type="kb" 
+                  id={item.file_id} 
+                  name={item.name} 
+                  activeMenu={activeMenu} 
+                  setActiveMenu={setActiveMenu} 
+                  onDownload={() => handleDownload('kb', item.file_id)} 
+                  onPreview={() => handlePreview('kb', item.file_id, item.name)} 
+                  onDelete={() => setDeleteConfirm({ isOpen: true, id: item.file_id, name: item.name, type: 'kb' })} 
+                  onLink={() => setLinkModal({ isOpen: true, source: { type: 'personal', id: item.file_id, name: item.name }, selectedTargets: [] })} 
+                  onViewRelated={() => handleViewRelated('personal', item.file_id, item.name)} 
+                />
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* --- PREVIEW OVERLAY --- */}
       <DocumentPreview isOpen={preview.isOpen} onClose={() => setPreview({ ...preview, isOpen: false })} fileName={preview.name} fileUrl={preview.url} />
 
-      {/* --- MODALS --- */}
+      {/* MODALS remain identical but with z-index assurance */}
       <Modal isOpen={linkModal.isOpen} onClose={() => setLinkModal({ isOpen: false, source: null, selectedTargets: [] })} title="Connect Resources">
         <div className="space-y-8 flex flex-col max-h-[70vh]">
           <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-2xl p-5 shrink-0"><p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Source Resource</p><p className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter">{linkModal.source?.name}</p></div>
@@ -419,11 +470,7 @@ export const Repository: React.FC = () => {
 
       {showToast.show && (
         <div className="fixed bottom-24 lg:bottom-10 right-4 lg:right-10 z-[200] animate-in slide-in-from-right duration-500">
-          <div className="bg-emerald-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-emerald-400/20">
-            <CheckCircle2 className="w-6 h-6" />
-            <p className="text-xs font-bold tracking-tight uppercase">{showToast.message}</p>
-            <button onClick={() => setShowToast({ show: false, message: '' })} className="ml-4 p-1 hover:bg-white/10 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
-          </div>
+          <div className="bg-emerald-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-emerald-400/20"><CheckCircle2 className="w-6 h-6" /><p className="text-xs font-bold tracking-tight uppercase">{showToast.message}</p><button onClick={() => setShowToast({ show: false, message: '' })} className="ml-4 p-1 hover:bg-white/10 rounded-lg transition-colors"><X className="w-4 h-4" /></button></div>
         </div>
       )}
     </div>
@@ -432,24 +479,49 @@ export const Repository: React.FC = () => {
 
 const ActionMenu = ({ type, id, name, activeMenu, setActiveMenu, onDownload, onPreview, onDelete, onLink, onViewRelated }: any) => {
   const isOpen = activeMenu?.type === type && activeMenu?.id === id;
+
   return (
-    <div className="relative shrink-0">
-      <button onClick={(e) => { e.stopPropagation(); setActiveMenu(isOpen ? null : { type, id }); }} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-all text-slate-400 hover:text-slate-600 dark:hover:text-white"><MoreVertical className="w-5 h-5" /></button>
+    <div className="relative">
+      <button 
+        onClick={(e) => { e.stopPropagation(); setActiveMenu(isOpen ? null : { type, id, name }); }}
+        className="p-2 bg-slate-50 dark:bg-white/5 lg:bg-transparent rounded-lg transition-all text-slate-400 hover:text-slate-600 dark:hover:text-white border border-slate-200 dark:border-white/10 lg:border-0"
+      >
+        <MoreVertical className="w-5 h-5" />
+      </button>
+
       {isOpen && (
         <>
           <div className="fixed inset-0 z-[150]" onClick={() => setActiveMenu(null)} />
-          <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl z-[160] py-2 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
-            <button onClick={(e) => { e.stopPropagation(); onPreview(); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"><Eye className="w-4 h-4 text-accent-primary" /> Quick View</button>
-            <button onClick={(e) => { e.stopPropagation(); onDownload(); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"><Download className="w-4 h-4 text-slate-400" /> Download</button>
-            <button onClick={(e) => { e.stopPropagation(); onLink(); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"><LinkIcon className="w-4 h-4 text-indigo-500" /> Link File</button>
-            <button onClick={(e) => { e.stopPropagation(); onViewRelated(); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"><Network className="w-4 h-4 text-emerald-500" /> Show Related</button>
-            <div className="h-px bg-slate-100 dark:bg-white/5 my-1" />
-            <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-[11px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all"><Trash2 className="w-4 h-4" /> Delete</button>
+          
+          {/* DESKTOP MENU: Floating Absolute */}
+          <div className="hidden lg:block absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl z-[160] py-2 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
+            <MenuContent onPreview={onPreview} onDownload={onDownload} onLink={onLink} onViewRelated={onViewRelated} onDelete={onDelete} />
+          </div>
+
+          {/* MOBILE MENU: Centered Bottom Sheet / Popup */}
+          <div className="lg:hidden fixed inset-x-4 bottom-24 z-[200] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.3)] p-2 animate-in slide-in-from-bottom-10 duration-300">
+            <div className="p-4 border-b border-slate-100 dark:border-white/5 mb-2">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">File Actions</p>
+              <p className="text-sm font-black text-slate-700 dark:text-slate-200 truncate">{name}</p>
+            </div>
+            <MenuContent onPreview={onPreview} onDownload={onDownload} onLink={onLink} onViewRelated={onViewRelated} onDelete={onDelete} />
+            <button onClick={() => setActiveMenu(null)} className="w-full py-4 mt-2 text-slate-500 font-black uppercase text-[10px] tracking-widest bg-slate-50 dark:bg-white/5 rounded-2xl">Cancel</button>
           </div>
         </>
       )}
     </div>
   );
 };
+
+const MenuContent = ({ onPreview, onDownload, onLink, onViewRelated, onDelete }: any) => (
+  <>
+    <button onClick={(e) => { e.stopPropagation(); onPreview(); }} className="w-full flex items-center gap-3 px-5 py-4 lg:py-3.5 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"><Eye className="w-4 h-4 text-accent-primary" /> Quick View</button>
+    <button onClick={(e) => { e.stopPropagation(); onDownload(); }} className="w-full flex items-center gap-3 px-5 py-4 lg:py-3.5 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"><Download className="w-4 h-4 text-slate-400" /> Download</button>
+    <button onClick={(e) => { e.stopPropagation(); onLink(); }} className="w-full flex items-center gap-3 px-5 py-4 lg:py-3.5 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"><LinkIcon className="w-4 h-4 text-indigo-500" /> Link File</button>
+    <button onClick={(e) => { e.stopPropagation(); onViewRelated(); }} className="w-full flex items-center gap-3 px-5 py-4 lg:py-3.5 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"><Network className="w-4 h-4 text-emerald-500" /> Related</button>
+    <div className="h-px bg-slate-100 dark:bg-white/5 my-1" />
+    <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="w-full flex items-center gap-3 px-5 py-4 lg:py-3.5 text-[11px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all"><Trash2 className="w-4 h-4" /> Delete</button>
+  </>
+);
 
 export default Repository;
