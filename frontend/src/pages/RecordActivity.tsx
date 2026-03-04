@@ -47,6 +47,15 @@ export const RecordActivity: React.FC = () => {
 
   const userStr = localStorage.getItem('user');
   const currentUser = JSON.parse(userStr || '{}');
+  
+  // DEBUG LOG - help identify why myTasksOnly fails
+  useEffect(() => {
+    if (currentUser) {
+      console.log('--- DEBUG: Current Session User ---');
+      console.log('Full Object:', currentUser);
+      console.log('-----------------------------------');
+    }
+  }, []);
 
   const [uploadModal, setUploadModal] = useState<{
     isOpen: boolean;
@@ -63,21 +72,39 @@ export const RecordActivity: React.FC = () => {
     return Array.from(map.entries()).map(([id, name]) => ({ value: id, label: name }));
   }, [activities]);
 
-  // Apply Filters
+  // Apply Filters & FORCE SORTING BY ID
   const filteredActivities = useMemo(() => {
-    return activities.filter(a => {
-      // Logic fix: Current user session often has IDs as strings in some auth patterns, 
-      // or the property might be slightly different. Ensuring numeric comparison.
-      const loggedInId = Number(currentUser.user_id);
-      const assignedId = a.responsible ? Number(a.responsible.user_id) : null;
+    // 1. Get Logged-in ID (Try multiple sources)
+    let loggedInId: number | null = Number(currentUser.user_id || currentUser.id);
+    
+    // 2. Fallback: Decode JWT if ID is missing (The 'sub' claim in token is the ID)
+    if (isNaN(loggedInId || NaN) && currentUser.access_token) {
+      try {
+        const payload = JSON.parse(atob(currentUser.access_token.split('.')[1]));
+        loggedInId = Number(payload.sub);
+      } catch (e) {}
+    }
 
-      const matchMyTasks = !myTasksOnly || (assignedId === loggedInId);
+    const loggedInUsername = currentUser.username?.toLowerCase();
+
+    const filtered = activities.filter(a => {
+      const assignedId = a.responsible ? Number(a.responsible.user_id) : null;
+      const assignedUsername = a.responsible?.username?.toLowerCase();
+
+      // MATCH LOGIC: Match by ID OR by Username (Backup)
+      const isMyTask = (assignedId && assignedId === loggedInId) || 
+                       (assignedUsername && assignedUsername === loggedInUsername);
+
+      const matchMyTasks = !myTasksOnly || isMyTask;
       const matchUser = filterUser === 'all' || (assignedId === Number(filterUser));
       const matchStatus = filterStatus === 'all' || a.status === filterStatus;
       
       return matchMyTasks && matchUser && matchStatus;
     });
-  }, [activities, myTasksOnly, filterUser, filterStatus, currentUser.user_id]);
+
+    // Enforce persistent sort order by activity_id ascending
+    return [...filtered].sort((a, b) => a.activity_id - b.activity_id);
+  }, [activities, myTasksOnly, filterUser, filterStatus, currentUser]);
 
   useEffect(() => {
     const fetchInitial = async () => {
@@ -97,6 +124,7 @@ export const RecordActivity: React.FC = () => {
   const fetchData = async () => {
     if (!selectedProjectId) return;
     try {
+      // 1. Fetch Core Data (Crucial for page load)
       const [actRes, delRes] = await Promise.all([
         api.get(`/tasks/project/${selectedProjectId}/`),
         api.get(`/repository/project/${selectedProjectId}/`)
@@ -104,6 +132,7 @@ export const RecordActivity: React.FC = () => {
       setActivities(actRes.data);
       setDeliverables(delRes.data);
 
+      // 2. Fetch Diagram Data separately (Corrected path: network-diagram)
       try {
         const diagRes = await api.get(`/projects/${selectedProjectId}/network-diagram/`);
         setDiagramData(diagRes.data);
@@ -125,7 +154,7 @@ export const RecordActivity: React.FC = () => {
 
   const handleStartPhase = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    // Open upload portal with 'First Draft' type to initiate activity
+    // Fix: Open upload portal with 'First Draft' type to initiate activity
     setUploadModal({ isOpen: true, activityId: id, docType: 'First Draft' });
   };
 
