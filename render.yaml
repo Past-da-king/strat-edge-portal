@@ -20,6 +20,8 @@ services:
         value: /etc/secrets/gcp-credentials.json
 
   # 2. Frontend (React Static Site)
+  # We use 'runtime: static' within a web service or 'staticSites'
+  # If 'staticSites' failed previously, we use 'type: web' + 'runtime: static'
   - type: web
     name: strat-edge-portal
     runtime: static
@@ -32,7 +34,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: strat-edge-api
-          property: url
+        value: https://strat-edge-api.onrender.com

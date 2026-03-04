@@ -7,7 +7,7 @@ const api = axios.create({
 // Request Interceptor: Add Auth Token and Trailing Slash
 api.interceptors.request.use(
   (config) => {
-    // 1. Ensure trailing slash for consistent backend routing (FastAPI preference)
+    // 1. Ensure trailing slash for consistent backend routing
     if (config.url && !config.url.endsWith('/') && !config.url.includes('?')) {
       config.url += '/';
     } else if (config.url && config.url.includes('?')) {
@@ -25,9 +25,7 @@ api.interceptors.request.use(
         if (user?.access_token) {
           config.headers.Authorization = `Bearer ${user.access_token}`;
         }
-      } catch (e) {
-        // Silent fail for user parse
-      }
+      } catch (e) {}
     }
     
     return config;

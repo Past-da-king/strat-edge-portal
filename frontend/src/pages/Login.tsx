@@ -28,8 +28,8 @@ export const Login: React.FC = () => {
     }
   }, [isDark]);
 
-  const handleLogin = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError('');
     setLoading(true);
     try {
