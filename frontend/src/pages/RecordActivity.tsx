@@ -20,7 +20,8 @@ import {
   Download,
   Info,
   ShieldCheck,
-  Hexagon
+  Hexagon,
+  Filter
 } from 'lucide-react';
 import api from '../services/api';
 import projectService from '../services/projectService';
@@ -39,11 +40,44 @@ export const RecordActivity: React.FC = () => {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'graph'>('list');
 
+  // Filter States
+  const [filterUser, setFilterUser] = useState<number | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<string | 'all'>('all');
+  const [myTasksOnly, setMyTasksOnly] = useState(false);
+
+  const userStr = localStorage.getItem('user');
+  const currentUser = JSON.parse(userStr || '{}');
+
   const [uploadModal, setUploadModal] = useState<{
     isOpen: boolean;
     activityId: number | null;
     docType: string;
   }>({ isOpen: false, activityId: null, docType: '' });
+
+  // Get unique assignees for the filter dropdown
+  const assignees = useMemo(() => {
+    const map = new Map();
+    activities.forEach(a => {
+      if (a.responsible) map.set(a.responsible.user_id, a.responsible.full_name);
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ value: id, label: name }));
+  }, [activities]);
+
+  // Apply Filters
+  const filteredActivities = useMemo(() => {
+    return activities.filter(a => {
+      // Logic fix: Current user session often has IDs as strings in some auth patterns, 
+      // or the property might be slightly different. Ensuring numeric comparison.
+      const loggedInId = Number(currentUser.user_id);
+      const assignedId = a.responsible ? Number(a.responsible.user_id) : null;
+
+      const matchMyTasks = !myTasksOnly || (assignedId === loggedInId);
+      const matchUser = filterUser === 'all' || (assignedId === Number(filterUser));
+      const matchStatus = filterStatus === 'all' || a.status === filterStatus;
+      
+      return matchMyTasks && matchUser && matchStatus;
+    });
+  }, [activities, myTasksOnly, filterUser, filterStatus, currentUser.user_id]);
 
   useEffect(() => {
     const fetchInitial = async () => {
@@ -63,7 +97,6 @@ export const RecordActivity: React.FC = () => {
   const fetchData = async () => {
     if (!selectedProjectId) return;
     try {
-      // 1. Fetch Core Data (Crucial for page load)
       const [actRes, delRes] = await Promise.all([
         api.get(`/tasks/project/${selectedProjectId}/`),
         api.get(`/repository/project/${selectedProjectId}/`)
@@ -71,12 +104,10 @@ export const RecordActivity: React.FC = () => {
       setActivities(actRes.data);
       setDeliverables(delRes.data);
 
-      // 2. Fetch Diagram Data separately (Corrected path: network-diagram)
       try {
         const diagRes = await api.get(`/projects/${selectedProjectId}/network-diagram/`);
         setDiagramData(diagRes.data);
       } catch (diagErr) {
-        console.warn('Network diagram failed to load, but activities will still show.', diagErr);
         setDiagramData(null);
       }
     } catch (err) {
@@ -92,14 +123,10 @@ export const RecordActivity: React.FC = () => {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  const handleStartPhase = async (e: React.MouseEvent, id: number) => {
+  const handleStartPhase = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    try {
-      await api.patch(`/tasks/${id}/status/?status=Active`);
-      fetchData();
-    } catch (err) {
-      console.error(err);
-    }
+    // Open upload portal with 'First Draft' type to initiate activity
+    setUploadModal({ isOpen: true, activityId: id, docType: 'First Draft' });
   };
 
   const handleUploadDraft = (e: React.MouseEvent, id: number) => {
@@ -147,30 +174,70 @@ export const RecordActivity: React.FC = () => {
         </div>
       </div>
 
-      {/* View Switcher */}
-      <div className="flex p-1 bg-slate-100 dark:bg-black/40 rounded-xl border border-slate-200 dark:border-white/5 w-fit mb-8 shadow-xl">
-        <button 
-          onClick={() => setViewMode('list')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
-            viewMode === 'list' ? 'bg-accent-primary text-white shadow-lg' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
-          }`}
-        >
-          <Hexagon className="w-3.5 h-3.5" /> List
-        </button>
-        <button 
-          onClick={() => setViewMode('graph')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
-            viewMode === 'graph' ? 'bg-accent-primary text-white shadow-lg' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
-          }`}
-        >
-          <Layout className="w-3.5 h-3.5" /> Graph
-        </button>
+      {/* View & Filter Switcher */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+        <div className="flex p-1 bg-slate-100 dark:bg-black/40 rounded-xl border border-slate-200 dark:border-white/5 w-fit shadow-xl">
+          <button 
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-2 px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+              viewMode === 'list' ? 'bg-accent-primary text-white shadow-lg' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
+            }`}
+          >
+            <Hexagon className="w-3.5 h-3.5" /> List
+          </button>
+          <button 
+            onClick={() => setViewMode('graph')}
+            className={`flex items-center gap-2 px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+              viewMode === 'graph' ? 'bg-accent-primary text-white shadow-lg' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
+            }`}
+          >
+            <Layout className="w-3.5 h-3.5" /> Graph
+          </button>
+        </div>
+
+        {/* Dynamic Filters - UPGRADED TO PREMIUM SELECTS */}
+        <div className="flex flex-wrap items-center gap-3">
+          <button 
+            onClick={() => setMyTasksOnly(!myTasksOnly)}
+            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all border ${
+              myTasksOnly 
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/20' 
+                : 'bg-slate-100 dark:bg-white/5 text-slate-500 border-slate-200 dark:border-white/5 hover:text-slate-900 dark:hover:text-slate-300'
+            }`}
+          >
+            <User className="w-3.5 h-3.5" /> My Assignments
+          </button>
+
+          <div className="w-56">
+            <CustomSelect
+              value={filterUser}
+              onChange={setFilterUser}
+              options={[
+                { value: 'all', label: 'ALL ASSIGNEES' },
+                ...assignees
+              ]}
+            />
+          </div>
+
+          <div className="w-48">
+            <CustomSelect
+              value={filterStatus}
+              onChange={setFilterStatus}
+              options={[
+                { value: 'all', label: 'ALL STATUSES' },
+                { value: 'Not Started', label: 'NOT STARTED' },
+                { value: 'Active', label: 'ACTIVE' },
+                { value: 'Complete', label: 'COMPLETE' }
+              ]}
+            />
+          </div>
+        </div>
       </div>
 
       {viewMode === 'list' ? (
         <div className="glass border border-slate-200 dark:border-white/5 rounded-[2rem] lg:rounded-3xl overflow-hidden shadow-2xl">
           <DenseTable headers={['Activity / Phase', 'Timeline', 'Assignee', 'Status', 'Actions']}>
-            {activities.map((activity: any) => {
+            {filteredActivities.map((activity: any) => {
               const isComplete = activity.status === 'Complete';
               const isActive = activity.status === 'Active';
               const isExpanded = expandedId === activity.activity_id;
