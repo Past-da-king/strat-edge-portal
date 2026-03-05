@@ -1,32 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  AlertTriangle, 
-  Settings, 
-  LogOut, 
-  ShieldCheck, 
-  FolderOpen, 
-  Folder, 
-  Coins, 
-  Activity, 
-  Plus, 
+import {
+  LayoutDashboard,
+  AlertTriangle,
+  Settings,
+  LogOut,
+  ShieldCheck,
+  FolderOpen,
+  Folder,
+  Coins,
+  Activity,
+  Plus,
   Bolt,
   ChevronLeft,
   ChevronRight,
   Sun,
   Moon,
   Menu,
-  X
+  X,
+  User
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, to, isCollapsed }: { icon: any, label: string, to: string, isCollapsed: boolean }) => (
-  <NavLink 
-    to={to} 
+  <NavLink
+    to={to}
     className={({ isActive }) => `
       flex items-center gap-3 px-6 py-4 cursor-pointer transition-all border-r-2 group
-      ${isActive 
-        ? 'bg-accent-primary/10 border-accent-primary text-accent-primary' 
+      ${isActive
+        ? 'bg-accent-primary/10 border-accent-primary text-accent-primary'
         : 'hover:bg-accent-primary/5 border-transparent text-slate-500 dark:text-slate-400 hover:text-accent-primary'
       }
       ${isCollapsed ? 'justify-center px-0' : ''}
@@ -39,8 +40,8 @@ const SidebarItem = ({ icon: Icon, label, to, isCollapsed }: { icon: any, label:
 );
 
 const MobileNavItem = ({ icon: Icon, label, to }: { icon: any, label: string, to: string }) => (
-  <NavLink 
-    to={to} 
+  <NavLink
+    to={to}
     className={({ isActive }) => `
       flex flex-col items-center justify-center gap-1 flex-1 py-3 transition-all
       ${isActive ? 'text-accent-primary scale-110' : 'text-slate-400 dark:text-slate-600'}
@@ -95,10 +96,10 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     { icon: Plus, label: "Setup", to: "/setup", roles: ['admin', 'pm', 'executive'] },
     { icon: AlertTriangle, label: "Risks", to: "/risks" },
     { icon: Folder, label: "Repository", to: "/repository" },
-    {icon: Activity, label: "Monitoring", to: "/monitoring", roles: ['admin', 'executive'] },
-    {icon: ShieldCheck, label: "Settings", to: "/settings", roles: ['admin', 'executive'] },
-    {icon: Settings, label: "Admin", to: "/admin", roles: ['admin', 'executive'] },
-
+    { icon: Activity, label: "Monitoring", to: "/monitoring", roles: ['admin', 'executive'] },
+    { icon: ShieldCheck, label: "Settings", to: "/settings", roles: ['admin', 'executive'] },
+    { icon: Settings, label: "Admin", to: "/admin", roles: ['admin', 'executive'] },
+    { icon: User, label: "User Settings", to: "/user-settings" },
   ];
 
   const primaryNav = navItems.filter(item => item.mobile);
@@ -106,7 +107,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
   return (
     <div className="flex h-screen bg-background text-slate-900 dark:text-slate-300 font-sans transition-colors duration-300 overflow-hidden">
-      
+
       {/* Desktop Sidebar */}
       <div className={`hidden lg:flex transition-all duration-300 ease-in-out flex-col bg-sidebar border-r border-slate-200 dark:border-slate-800 ${isCollapsed ? 'w-20' : 'w-64'}`}>
         <div className={`p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between transition-all ${isCollapsed ? 'flex-col gap-4' : 'gap-3'}`}>
@@ -121,7 +122,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
               </div>
             )}
           </div>
-          <button 
+          <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className={`p-2 hover:bg-accent-primary/5 rounded-lg transition-colors text-slate-500 hover:text-accent-primary`}
           >
@@ -133,27 +134,27 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           {navItems
             .filter(item => !item.roles || item.roles.includes(user.role))
             .map(item => (
-              <SidebarItem 
-                key={item.to} 
-                icon={item.icon} 
-                label={item.label} 
-                to={item.to} 
-                isCollapsed={isCollapsed} 
+              <SidebarItem
+                key={item.to}
+                icon={item.icon}
+                label={item.label}
+                to={item.to}
+                isCollapsed={isCollapsed}
               />
             ))
           }
         </nav>
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
-          <button 
+          <button
             onClick={() => setIsDark(!isDark)}
             className={`w-full flex items-center transition-all duration-300 text-slate-500 hover:text-accent-primary hover:bg-accent-primary/10 rounded-xl group py-4 ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-6'}`}
           >
             {isDark ? <Sun className="w-5 h-5 shrink-0" /> : <Moon className="w-5 h-5 shrink-0" />}
             {!isCollapsed && <span className="text-sm font-medium">{isDark ? 'Light Mode' : 'Dark Mode'}</span>}
           </button>
-          
-          <button 
+
+          <button
             onClick={handleLogout}
             className={`w-full flex items-center transition-all duration-300 text-slate-500 dark:text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl group py-4 ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-6'}`}
           >
@@ -184,13 +185,13 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             {navItems
               .filter(item => !item.roles || item.roles.includes(user.role))
               .map(item => (
-                <NavLink 
+                <NavLink
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) => `
                     flex items-center gap-4 p-5 rounded-2xl border transition-all
-                    ${isActive 
-                      ? 'bg-accent-primary/10 border-accent-primary text-accent-primary shadow-lg shadow-accent-primary/5' 
+                    ${isActive
+                      ? 'bg-accent-primary/10 border-accent-primary text-accent-primary shadow-lg shadow-accent-primary/5'
                       : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-400'
                     }
                   `}
@@ -200,7 +201,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                 </NavLink>
               ))
             }
-            <button 
+            <button
               onClick={handleLogout}
               className="flex items-center gap-4 p-5 rounded-2xl border border-rose-500/20 bg-rose-500/5 text-rose-500 mt-8"
             >
@@ -223,7 +224,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         {primaryNav.map(item => (
           <MobileNavItem key={item.to} icon={item.icon} label={item.label} to={item.to} />
         ))}
-        <button 
+        <button
           onClick={() => setIsMobileMenuOpen(true)}
           className="flex flex-col items-center justify-center gap-1 flex-1 py-3 text-slate-400 dark:text-slate-600"
         >

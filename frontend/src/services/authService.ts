@@ -5,7 +5,7 @@ import axios from 'axios';
 // although here we can use the same instance if we want.
 export const login = async (username: string, password: string) => {
   console.log('Attempting login for user:', username);
-  
+
   // FastAPI OAuth2PasswordRequestForm expects x-www-form-urlencoded
   const params = new URLSearchParams();
   params.append('username', username);
@@ -18,9 +18,9 @@ export const login = async (username: string, password: string) => {
         'Content-Type': 'application/x-www-form-urlencoded'
       }
     });
-    
+
     console.log('Login response received:', response.status);
-    
+
     if (response.data.access_token) {
       console.log('Login successful, storing token');
       localStorage.setItem('user', JSON.stringify(response.data));
@@ -70,6 +70,11 @@ export const createUser = async (userData: any) => {
   return response.data;
 };
 
+export const updateMyProfile = async (data: { username?: string, full_name?: string, password?: string, old_password?: string }) => {
+  const response = await api.put(`auth/users/me/`, data);
+  return response.data;
+};
+
 const authService = {
   login,
   logout,
@@ -77,7 +82,8 @@ const authService = {
   getUsers,
   updateUserStatus,
   updateUserRole,
-  createUser
+  createUser,
+  updateMyProfile
 };
 
 export default authService;

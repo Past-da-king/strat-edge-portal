@@ -12,16 +12,17 @@ import { AdminSettings } from './pages/AdminSettings'
 import { RecordExpenditure } from './pages/RecordExpenditure'
 import { Monitoring } from './pages/Monitoring'
 import { Overview } from './pages/Overview'
+import { UserSettings } from './pages/UserSettings'
 
 const PrivateRoute = ({ children, roles }: { children: React.ReactNode, roles?: string[] }) => {
   const userStr = localStorage.getItem('user');
   if (!userStr) return <Navigate to="/login" />;
-  
+
   const user = JSON.parse(userStr);
   if (roles && !roles.includes(user.role)) {
     return <Navigate to="/" />;
   }
-  
+
   return <>{children}</>;
 };
 
@@ -30,11 +31,19 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-        
+
         <Route path="/" element={
           <PrivateRoute>
             <DashboardLayout>
               <Overview />
+            </DashboardLayout>
+          </PrivateRoute>
+        } />
+
+        <Route path="/user-settings" element={
+          <PrivateRoute>
+            <DashboardLayout>
+              <UserSettings />
             </DashboardLayout>
           </PrivateRoute>
         } />

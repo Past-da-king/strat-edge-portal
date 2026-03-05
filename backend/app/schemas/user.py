@@ -12,6 +12,12 @@ class UserCreate(UserBase):
 class UserUpdate(UserBase):
     password: Optional[str] = None
 
+class UserUpdateMe(BaseModel):
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    password: Optional[str] = None
+    old_password: Optional[str] = None
+
 class User(UserBase):
     user_id: int
     status: str = "approved"

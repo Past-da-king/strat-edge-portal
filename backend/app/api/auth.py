@@ -8,7 +8,7 @@ from ..core.config import settings
 from ..models import database as models
 from ..schemas import token as token_schema
 from ..schemas import user as user_schema
-from .deps import get_db, get_current_active_admin
+from .deps import get_db, get_current_active_admin, get_current_user
 
 router = APIRouter()
 
@@ -103,3 +103,29 @@ def get_audit_logs(
     """)
     results = db.execute(query).fetchall()
     return [dict(r._mapping) for r in results]
+
+@router.put("/users/me/", response_model=user_schema.User)
+def update_my_settings(
+    payload: user_schema.UserUpdateMe,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+) -> Any:
+    # Check if they are trying to change to an existing username
+    if payload.username and payload.username != current_user.username:
+        user_conflict = db.query(models.User).filter(models.User.username == payload.username).first()
+        if user_conflict:
+            raise HTTPException(status_code=400, detail="Username already exists")
+        current_user.username = payload.username
+        
+    if payload.full_name is not None:
+        current_user.full_name = payload.full_name
+        
+    if payload.password:
+        if not payload.old_password or not security.verify_password(payload.old_password, current_user.password_hash):
+            raise HTTPException(status_code=400, detail="Incorrect old password")
+        current_user.password_hash = security.get_password_hash(payload.password)
+        
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
