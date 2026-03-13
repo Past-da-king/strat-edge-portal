@@ -183,10 +183,21 @@ async def upload_task_output(
     )
     db.add(db_output)
     
-    if doc_type == "First Draft" and task.status == "Not Started":
+    # Normalize doc_type for status transitions
+    normalized_doc_type = doc_type.strip().lower()
+    
+    print(f"DEBUG: Processing upload for Task ID {task_id}")
+    print(f"DEBUG: Received doc_type: '{doc_type}', Normalized: '{normalized_doc_type}'")
+    print(f"DEBUG: Current Task Status: '{task.status}'")
+    
+    if normalized_doc_type == "first draft" and task.status == "Not Started":
+        print(f"DEBUG: Transitioning status: 'Not Started' -> 'Active'")
         task.status = "Active"
-    elif doc_type == "Final Document":
+    elif normalized_doc_type in ["final document", "final submission"]:
+        print(f"DEBUG: Transitioning status: '{task.status}' -> 'Complete'")
         task.status = "Complete"
+    else:
+        print(f"DEBUG: No status transition triggered for doc_type: '{normalized_doc_type}'")
         
     db.commit()
     db.refresh(task)

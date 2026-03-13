@@ -165,7 +165,7 @@ export const RecordActivity: React.FC = () => {
 
   const handleComplete = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    setUploadModal({ isOpen: true, activityId: id, docType: 'Final Submission' });
+    setUploadModal({ isOpen: true, activityId: id, docType: 'Final Document' });
   };
 
   const handleDownloadFile = async (id: number, name: string) => {
