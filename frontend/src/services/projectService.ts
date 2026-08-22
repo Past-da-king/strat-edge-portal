@@ -1,8 +1,19 @@
 import api from './api';
 
 // --- Project Endpoints ---
-export const getProjects = async () => {
-  const response = await api.get('projects/');
+export const getProjects = async (includeArchived: boolean = false) => {
+  const response = await api.get(`projects/?include_archived=${includeArchived}`);
+  return response.data;
+};
+
+/** Soft close: the project leaves the portfolio but keeps all of its data. */
+export const archiveProject = async (id: number) => {
+  const response = await api.post(`projects/${id}/archive/`, {});
+  return response.data;
+};
+
+export const restoreProject = async (id: number) => {
+  const response = await api.post(`projects/${id}/restore/`, {});
   return response.data;
 };
 
@@ -96,6 +107,8 @@ export const restoreBackup = async (file: File) => {
 
 const projectService = {
   getProjects,
+  archiveProject,
+  restoreProject,
   getProject,
   getProjectMetrics,
   getBurndownData,

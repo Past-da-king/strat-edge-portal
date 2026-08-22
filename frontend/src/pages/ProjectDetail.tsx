@@ -170,6 +170,11 @@ export const ProjectDetail: React.FC = () => {
           <div>
             <div className="flex items-center gap-3 mb-0.5">
               <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none">{project.project_name}</h1>
+              {project.is_archived && (
+                <span className="px-2.5 py-1 rounded-lg bg-slate-500/10 text-slate-500 text-[9px] font-black uppercase tracking-widest border border-slate-500/20">
+                  Archived
+                </span>
+              )}
               {refreshing && <RefreshCw className="w-4 h-4 text-accent-primary animate-spin" />}
             </div>
             <p className="text-slate-500 font-bold text-[9px] uppercase tracking-[0.25em]">{project.project_number} • {project.client} • {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>

@@ -3,39 +3,59 @@ import axios from 'axios';
 
 // Login needs raw axios to avoid interceptor issues with FormData or base URL if different
 // although here we can use the same instance if we want.
+/**
+ * Step 1 of 2. A correct password returns a CHALLENGE token, never a session -
+ * two-factor is compulsory. The caller then goes to mfaSetup (first time) or
+ * straight to mfaVerify.
+ */
 export const login = async (username: string, password: string) => {
-  console.log('Attempting login for user:', username);
-
   // FastAPI OAuth2PasswordRequestForm expects x-www-form-urlencoded
   const params = new URLSearchParams();
   params.append('username', username);
   params.append('password', password);
 
-  try {
-    console.log('Sending POST request to auth/login/');
-    const response = await api.post(`auth/login/`, params, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    });
-
-    console.log('Login response received:', response.status);
-
-    if (response.data.access_token) {
-      console.log('Login successful, storing token');
-      localStorage.setItem('user', JSON.stringify(response.data));
-    } else {
-      console.warn('Login response missing access_token');
+  const response = await api.post(`auth/login/`, params, {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
     }
-    return response.data;
-  } catch (err: any) {
-    console.error('Login service error:', err.message);
-    if (err.response) {
-      console.error('Error status:', err.response.status);
-      console.error('Error data:', err.response.data);
-    }
-    throw err;
+  });
+  return response.data as {
+    mfa_required: boolean;
+    mfa_enrolled: boolean;
+    challenge_token: string;
+    full_name?: string;
+    username?: string;
+  };
+};
+
+/** First-time enrolment: returns the QR image and the secret for manual entry. */
+export const mfaSetup = async (challengeToken: string) => {
+  const response = await api.post(`auth/mfa/setup/`, {}, {
+    headers: { Authorization: `Bearer ${challengeToken}` }
+  });
+  return response.data as {
+    secret: string;
+    otpauth_uri: string;
+    qr_data_uri: string;
+    issuer: string;
+  };
+};
+
+/** Step 2. A verified code is what finally signs the user in. */
+export const mfaVerify = async (challengeToken: string, code: string) => {
+  const response = await api.post(`auth/mfa/verify/`, { code }, {
+    headers: { Authorization: `Bearer ${challengeToken}` }
+  });
+  if (response.data.access_token) {
+    localStorage.setItem('user', JSON.stringify(response.data));
   }
+  return response.data;
+};
+
+/** Admin recovery: clears a user's authenticator so they enrol again. */
+export const resetUserMfa = async (userId: number) => {
+  const response = await api.post(`auth/users/${userId}/mfa/reset/`, {});
+  return response.data;
 };
 
 export const logout = () => {
@@ -77,6 +97,9 @@ export const updateMyProfile = async (data: { username?: string, full_name?: str
 
 const authService = {
   login,
+  mfaSetup,
+  mfaVerify,
+  resetUserMfa,
   logout,
   getCurrentUser,
   getUsers,

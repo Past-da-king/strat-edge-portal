@@ -22,6 +22,12 @@ class User(Base):
     password_hash = Column(String)
     role = Column(String, default="team") # admin, pm, team, executive
     status = Column(String, default="approved")
+
+    # --- Two-factor authentication (TOTP) ---
+    mfa_secret = Column(String)                 # base32 seed, set at enrolment
+    mfa_enabled = Column(Integer, default=0)    # 1 once the first code is verified
+    mfa_confirmed_at = Column(DateTime)
+
     
     projects_managed = relationship("Project", back_populates="pm", foreign_keys="Project.pm_user_id")
     tasks_assigned = relationship("Task", back_populates="responsible")
@@ -40,6 +46,15 @@ class Project(Base):
     status = Column(String, default="active")
     created_at = Column(DateTime, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.user_id"))
+
+    # --- Archive (a soft close: the project keeps all its data, it just leaves
+    # the working portfolio). archived_at is the single source of truth. ---
+    archived_at = Column(DateTime)
+    archived_by = Column(Integer, ForeignKey("users.user_id"))
+
+    @property
+    def is_archived(self) -> bool:
+        return self.archived_at is not None
 
     pm = relationship("User", back_populates="projects_managed", foreign_keys=[pm_user_id])
     creator = relationship("User", foreign_keys=[created_by])
@@ -199,32 +214,46 @@ class RiskProof(Base):
 # Columns added after the original schema shipped. Adding them here (rather than
 # in a migration tool) keeps an already-populated SQLite or Postgres database in
 # step on deploy - the check is idempotent and safe to run on every boot.
-LATER_TASK_COLUMNS = {
-    "complexity": ("VARCHAR", "Medium"),
-    "input_type": ("VARCHAR", "Manual"),
-    "financial_input": ("VARCHAR", "No"),
+LATER_COLUMNS = {
+    "baseline_schedule": {
+        "complexity": ("VARCHAR", "Medium"),
+        "input_type": ("VARCHAR", "Manual"),
+        "financial_input": ("VARCHAR", "No"),
+    },
+    "users": {
+        "mfa_secret": ("VARCHAR", None),
+        "mfa_enabled": ("INTEGER", 0),
+        "mfa_confirmed_at": ("TIMESTAMP", None),
+    },
+    "projects": {
+        "archived_at": ("TIMESTAMP", None),
+        "archived_by": ("INTEGER", None),
+    },
 }
 
 
 def ensure_schema():
-    """Add any missing baseline_schedule columns to an existing database."""
+    """Add any columns the models have gained to an already-existing database."""
     from sqlalchemy import inspect, text
 
     inspector = inspect(engine)
-    if "baseline_schedule" not in inspector.get_table_names():
-        return
+    tables = set(inspector.get_table_names())
 
-    existing = {c["name"] for c in inspector.get_columns("baseline_schedule")}
     with engine.begin() as conn:
-        for name, (col_type, default) in LATER_TASK_COLUMNS.items():
-            if name in existing:
+        for table, columns in LATER_COLUMNS.items():
+            if table not in tables:
                 continue
-            conn.execute(text(f"ALTER TABLE baseline_schedule ADD COLUMN {name} {col_type}"))
-            conn.execute(
-                text(f"UPDATE baseline_schedule SET {name} = :val WHERE {name} IS NULL"),
-                {"val": default},
-            )
-            print(f"[schema] added baseline_schedule.{name} (backfilled '{default}')")
+            existing = {c["name"] for c in inspector.get_columns(table)}
+            for name, (col_type, default) in columns.items():
+                if name in existing:
+                    continue
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {col_type}"))
+                if default is not None:
+                    conn.execute(
+                        text(f"UPDATE {table} SET {name} = :val WHERE {name} IS NULL"),
+                        {"val": default},
+                    )
+                print(f"[schema] added {table}.{name}" + (f" (backfilled '{default}')" if default is not None else ""))
 
 
 def get_db():

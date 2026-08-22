@@ -8,7 +8,9 @@ import {
   Trash2, 
   AlertTriangle, 
   CheckCircle2, 
-  X 
+  X,
+  Archive,
+  ArchiveRestore
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import projectService from '../services/projectService';
@@ -28,7 +30,14 @@ export const Projects: React.FC = () => {
     name: ''
   });
 
-  const [showToast, setShowToast] = useState(false);
+  const [archiveConfirm, setArchiveConfirm] = useState<{ isOpen: boolean; id: number | null; name: string }>({
+    isOpen: false,
+    id: null,
+    name: ''
+  });
+
+  const [showArchived, setShowArchived] = useState(false);
+  const [toast, setToast] = useState<{ title: string; body: string } | null>(null);
 
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -37,7 +46,7 @@ export const Projects: React.FC = () => {
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const data = await projectService.getProjects();
+      const data = await projectService.getProjects(showArchived);
       setProjects(data);
     } catch (err) {
       console.error('Failed to fetch projects', err);
@@ -48,7 +57,35 @@ export const Projects: React.FC = () => {
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+  }, [showArchived]);
+
+  const flash = (title: string, body: string) => {
+    setToast({ title, body });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleArchiveProject = async () => {
+    if (!archiveConfirm.id) return;
+    try {
+      await projectService.archiveProject(archiveConfirm.id);
+      setArchiveConfirm({ isOpen: false, id: null, name: '' });
+      fetchProjects();
+      flash('Project Archived', 'It has left the active portfolio. Nothing was deleted.');
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Archive failed');
+    }
+  };
+
+  const handleRestoreProject = async (id: number) => {
+    try {
+      await projectService.restoreProject(id);
+      setActiveMenu(null);
+      fetchProjects();
+      flash('Project Restored', 'It is back in the active portfolio.');
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Restore failed');
+    }
+  };
 
   const handleDeleteProject = async () => {
     if (!deleteConfirm.id) return;
@@ -56,8 +93,7 @@ export const Projects: React.FC = () => {
       await api.delete(`/projects/${deleteConfirm.id}/`);
       setDeleteConfirm({ isOpen: false, id: null, name: '' });
       fetchProjects();
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 4000);
+      flash('Project Purged', 'The project has been permanently removed.');
     } catch (err) {
       console.error('Delete failed', err);
       alert('Delete failed');
@@ -90,9 +126,16 @@ export const Projects: React.FC = () => {
             className="w-full bg-sidebar border border-slate-200 dark:border-slate-800 rounded-xl pl-12 pr-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-primary/50 transition-all shadow-sm"
           />
         </div>
-        <button className="bg-sidebar border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 px-6 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-all flex items-center gap-2 shadow-sm">
-          <Filter className="w-4 h-4" />
-          FILTERS
+        <button
+          onClick={() => setShowArchived(!showArchived)}
+          className={`border px-6 py-3 rounded-xl transition-all flex items-center gap-2 shadow-sm font-bold text-xs uppercase tracking-widest ${
+            showArchived
+              ? 'bg-accent-primary/10 border-accent-primary/30 text-accent-primary'
+              : 'bg-sidebar border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
+          }`}
+        >
+          <Archive className="w-4 h-4" />
+          {showArchived ? 'Showing Archived' : 'Show Archived'}
         </button>
       </div>
 
@@ -105,7 +148,12 @@ export const Projects: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredProjects.map((project: any) => (
             <div key={project.project_id} className="relative group/card">
-              <div onClick={() => navigate(`/projects/${project.project_id}`)}>
+              {project.is_archived && (
+                <div className="absolute top-4 left-4 z-10 px-2.5 py-1 rounded-lg bg-slate-900/80 text-white text-[9px] font-black uppercase tracking-widest border border-white/10 flex items-center gap-1.5">
+                  <Archive className="w-3 h-3" /> Archived
+                </div>
+              )}
+              <div onClick={() => navigate(`/projects/${project.project_id}`)} className={project.is_archived ? 'opacity-60 grayscale' : ''}>
                 <ProjectCard
                   project_name={project.project_name}
                   project_number={project.project_number}
@@ -131,6 +179,25 @@ export const Projects: React.FC = () => {
                     <>
                       <div className="fixed inset-0 z-20" onClick={() => setActiveMenu(null)} />
                       <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl z-30 py-2 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl">
+                        {project.is_archived ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleRestoreProject(project.project_id); }}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors"
+                          >
+                            <ArchiveRestore className="w-4 h-4" /> Restore Project
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setArchiveConfirm({ isOpen: true, id: project.project_id, name: project.project_name });
+                              setActiveMenu(null);
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+                          >
+                            <Archive className="w-4 h-4" /> Archive Project
+                          </button>
+                        )}
                         <button 
                           onClick={(e) => { 
                             e.stopPropagation(); 
@@ -176,16 +243,37 @@ export const Projects: React.FC = () => {
         </div>
       </Modal>
 
+      {/* Archive Confirmation Modal */}
+      <Modal
+        isOpen={archiveConfirm.isOpen}
+        onClose={() => setArchiveConfirm({ isOpen: false, id: null, name: '' })}
+        title="Archive Project"
+      >
+        <div className="text-center py-4">
+          <div className="w-16 h-16 bg-accent-primary/10 rounded-2xl flex items-center justify-center text-accent-primary mx-auto mb-6 border border-accent-primary/20">
+            <Archive className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase mb-3 tracking-tighter">Archive Project?</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-10 max-w-xs mx-auto font-medium leading-relaxed">
+            <span className="text-slate-900 dark:text-white font-bold">"{archiveConfirm.name}"</span> will leave the active portfolio and the project pickers. Every activity, document, risk and expenditure is kept, and you can restore it at any time.
+          </p>
+          <div className="flex gap-3">
+            <button onClick={() => setArchiveConfirm({ isOpen: false, id: null, name: '' })} className="flex-1 py-4 rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-500 font-black uppercase text-[10px] tracking-widest border border-slate-200 dark:border-white/5">Cancel</button>
+            <button onClick={handleArchiveProject} className="flex-1 py-4 rounded-2xl bg-accent-primary hover:bg-accent-secondary text-white font-black uppercase text-[10px] tracking-widest shadow-xl shadow-accent-primary/20 transition-all">Yes, Archive</button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Success Toast */}
-      {showToast && (
+      {toast && (
         <div className="fixed bottom-24 lg:bottom-10 right-4 lg:right-10 z-[200] animate-in slide-in-from-right duration-500">
           <div className="bg-emerald-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-emerald-400/20">
             <CheckCircle2 className="w-6 h-6" />
             <div>
-              <p className="font-black uppercase tracking-widest text-[10px]">Project Purged</p>
-              <p className="text-xs font-bold opacity-90 tracking-tight">The project has been permanently removed.</p>
+              <p className="font-black uppercase tracking-widest text-[10px]">{toast.title}</p>
+              <p className="text-xs font-bold opacity-90 tracking-tight">{toast.body}</p>
             </div>
-            <button onClick={() => setShowToast(false)} className="ml-4 p-1 hover:bg-white/10 rounded-lg transition-colors">
+            <button onClick={() => setToast(null)} className="ml-4 p-1 hover:bg-white/10 rounded-lg transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>

@@ -15,3 +15,5 @@ matplotlib
 seaborn
 psycopg2-binary
 werkzeug
+pyotp
+qrcode[pil]

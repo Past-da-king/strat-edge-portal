@@ -21,5 +21,6 @@ class UserUpdateMe(BaseModel):
 class User(UserBase):
     user_id: int
     status: str = "approved"
+    mfa_enabled: Optional[int] = 0
 
     model_config = ConfigDict(from_attributes=True)

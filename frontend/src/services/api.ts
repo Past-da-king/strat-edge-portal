@@ -35,7 +35,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Covers an expired session and the 2FA guards (MFA_REQUIRED /
+      // MFA_ENROLMENT_REQUIRED) - either way the user has to sign in again.
       localStorage.removeItem('user');
+      const onLoginPage = window.location.pathname.startsWith('/login');
+      const isAuthCall = (error.config?.url || '').includes('auth/');
+      if (!onLoginPage && !isAuthCall) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
