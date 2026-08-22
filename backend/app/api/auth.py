@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta, datetime
@@ -151,6 +152,26 @@ def reset_user_mfa(
         user_id=current_user.user_id,
     )
     return user
+
+# The four access levels this application defines. Strat Edge ID reads this so
+# the access-administration dashboard offers the Portal's REAL roles - add one
+# here and it appears there on the next sync, with no change to ID itself.
+PORTAL_ROLES = [
+    {"key": "admin", "label": "Administrator", "description": "Full control of the portal"},
+    {"key": "pm", "label": "Project Manager", "description": "Owns projects, plans and budgets"},
+    {"key": "team", "label": "Team Member", "description": "Records activity and uploads outputs"},
+    {"key": "executive", "label": "Executive", "description": "Oversight across the portfolio"},
+]
+
+
+@router.get("/roles/")
+def list_roles(request: Request) -> Any:
+    """Machine-readable access levels, for Strat Edge ID. Shared-secret guarded."""
+    expected = os.getenv("SSO_SHARED_SECRET")
+    if not expected or request.headers.get("X-Strat-Edge-Secret") != expected:
+        raise HTTPException(status_code=401, detail="Not authorised")
+    return PORTAL_ROLES
+
 
 @router.get("/users/", response_model=List[user_schema.User])
 def list_users(
