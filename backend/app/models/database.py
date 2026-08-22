@@ -97,6 +97,27 @@ class Task(Base):
     expected_output = Column(Text)
     depends_on = Column(Integer)
     sort_order = Column(Integer)
+
+    # --- Planning attributes (drop-downs on the activity plan) ---
+    complexity = Column(String, default="Medium")       # Low | Medium | High | Very High
+    input_type = Column(String, default="Manual")       # Manual | Hybrid | Automated | External
+    financial_input = Column(String, default="No")      # Yes | No
+
+    @property
+    def rating_score(self) -> float:
+        """1.0 - 5.0, derived from the drop-downs above plus the planned duration."""
+        from ..core.rating import compute_rating
+        score, _ = compute_rating(
+            self.complexity, self.input_type, self.financial_input,
+            self.planned_start, self.planned_finish
+        )
+        return score
+
+    @property
+    def rating_band(self) -> str:
+        from ..core.rating import band_for
+        return band_for(self.rating_score)
+
     
     project = relationship("Project", back_populates="tasks")
     responsible = relationship("User", back_populates="tasks_assigned")
@@ -174,6 +195,37 @@ class RiskProof(Base):
 
     risk = relationship("Risk", back_populates="proofs")
     uploader = relationship("User")
+
+# Columns added after the original schema shipped. Adding them here (rather than
+# in a migration tool) keeps an already-populated SQLite or Postgres database in
+# step on deploy - the check is idempotent and safe to run on every boot.
+LATER_TASK_COLUMNS = {
+    "complexity": ("VARCHAR", "Medium"),
+    "input_type": ("VARCHAR", "Manual"),
+    "financial_input": ("VARCHAR", "No"),
+}
+
+
+def ensure_schema():
+    """Add any missing baseline_schedule columns to an existing database."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "baseline_schedule" not in inspector.get_table_names():
+        return
+
+    existing = {c["name"] for c in inspector.get_columns("baseline_schedule")}
+    with engine.begin() as conn:
+        for name, (col_type, default) in LATER_TASK_COLUMNS.items():
+            if name in existing:
+                continue
+            conn.execute(text(f"ALTER TABLE baseline_schedule ADD COLUMN {name} {col_type}"))
+            conn.execute(
+                text(f"UPDATE baseline_schedule SET {name} = :val WHERE {name} IS NULL"),
+                {"val": default},
+            )
+            print(f"[schema] added baseline_schedule.{name} (backfilled '{default}')")
+
 
 def get_db():
     db = SessionLocal()
