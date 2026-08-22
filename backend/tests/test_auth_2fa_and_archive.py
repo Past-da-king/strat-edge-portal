@@ -4,11 +4,17 @@ End-to-end proof of the two features, against the real routers over HTTP.
 Run:  cd backend && PYTHONPATH=. .venv/bin/python tests/test_auth_2fa_and_archive.py
 """
 
-import os, tempfile, datetime
+import os, secrets, tempfile, datetime
+
+# Everything below is generated per run and thrown away with the temp database.
+# Nothing here is a real credential - keep it that way so secret scanners on this
+# public repo stay quiet and a genuine leak is never lost in the noise.
+TEST_USERNAME = "test-user"
+TEST_PASSWORD = secrets.token_urlsafe(24)
 
 _fd, _db = tempfile.mkstemp(suffix=".db"); os.close(_fd)
 os.environ["DATABASE_URL"] = f"sqlite:///{_db}"
-os.environ["SECRET_KEY"] = "test-secret-key"
+os.environ["SECRET_KEY"] = secrets.token_urlsafe(32)
 
 import pyotp
 from fastapi import FastAPI
@@ -23,8 +29,8 @@ Base.metadata.create_all(bind=engine)
 ensure_schema()
 
 db = SessionLocal()
-db.add(User(username="ayanda", full_name="Ayanda", role="admin", status="approved",
-            password_hash=get_password_hash("portal123")))
+db.add(User(username=TEST_USERNAME, full_name="Test Admin", role="admin", status="approved",
+            password_hash=get_password_hash(TEST_PASSWORD)))
 db.commit()
 
 app = FastAPI()
@@ -37,10 +43,10 @@ def check(label, cond):
     assert cond, label
 
 print("\n--- 2FA ---")
-r = c.post("/auth/login/", data={"username": "ayanda", "password": "wrong"})
+r = c.post("/auth/login/", data={"username": TEST_USERNAME, "password": "not-the-password"})
 check("wrong password rejected", r.status_code == 400)
 
-r = c.post("/auth/login/", data={"username": "ayanda", "password": "portal123"})
+r = c.post("/auth/login/", data={"username": TEST_USERNAME, "password": TEST_PASSWORD})
 body = r.json()
 check("password alone returns a challenge, never a session", r.status_code == 200 and "access_token" not in body)
 check("challenge says not yet enrolled", body["mfa_required"] is True and body["mfa_enrolled"] is False)
@@ -74,7 +80,7 @@ legacy = jwt.encode({"sub": "1", "exp": datetime.datetime.utcnow() + datetime.ti
 r = c.get("/projects/", headers={"Authorization": f"Bearer {legacy}"})
 check("pre-2FA token (no mfa claim) is dead", r.status_code == 401)
 
-r = c.post("/auth/login/", data={"username": "ayanda", "password": "portal123"})
+r = c.post("/auth/login/", data={"username": TEST_USERNAME, "password": TEST_PASSWORD})
 check("returning user is flagged as enrolled", r.json()["mfa_enrolled"] is True)
 challenge2 = r.json()["challenge_token"]
 r = c.post("/auth/mfa/setup/", json={}, headers={"Authorization": f"Bearer {challenge2}"})
