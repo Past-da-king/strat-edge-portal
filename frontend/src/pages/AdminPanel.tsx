@@ -16,6 +16,7 @@ import {
   Activity,
   Fingerprint,
   Key,
+  ShieldOff,
   X
 } from 'lucide-react';
 import api from '../services/api';
@@ -82,6 +83,17 @@ export const AdminPanel: React.FC = () => {
     } catch (err: any) {
       console.error('Role update failed:', err.response?.data || err.message);
       triggerToast('Security update rejected by server', 'error');
+    }
+  };
+
+  const handleResetMfa = async (userId: number, name: string) => {
+    if (!window.confirm(`Reset two-factor for ${name}? They will scan a new QR code at their next sign-in, and any session they have open right now ends immediately.`)) return;
+    try {
+      await authService.resetUserMfa(userId);
+      triggerToast('Two-factor reset. The user must enrol again.');
+      fetchData();
+    } catch (err: any) {
+      triggerToast('Two-factor reset failed', 'error');
     }
   };
 
@@ -163,6 +175,9 @@ export const AdminPanel: React.FC = () => {
                       <p className="font-black text-slate-900 dark:text-white text-lg tracking-tight uppercase">{user.full_name}</p>
                       <div className="flex items-center gap-3 mt-1">
                         <span className="text-[10px] font-bold text-slate-500 font-mono tracking-widest underline decoration-accent-primary/30 underline-offset-4">@{user.username}</span>
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${user.mfa_enabled ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20'}`}>
+                          {user.mfa_enabled ? '2FA On' : '2FA Not Set Up'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -200,6 +215,14 @@ export const AdminPanel: React.FC = () => {
                         title={user.status === 'approved' ? "Disable User" : "Enable User"}
                       >
                         {user.status === 'approved' || user.status === 'active' ? <XCircle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+                      </button>
+                      <button
+                        onClick={() => handleResetMfa(user.user_id, user.full_name || user.username)}
+                        disabled={!user.mfa_enabled}
+                        className="p-3 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-accent-primary transition-all disabled:opacity-30 disabled:hover:text-slate-400"
+                        title={user.mfa_enabled ? "Reset two-factor (user re-enrols at next sign-in)" : "This user has not set up two-factor yet"}
+                      >
+                        <ShieldOff className="w-5 h-5" />
                       </button>
                       <button className="p-3 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-400 hover:text-rose-500 transition-all">
                         <Trash2 className="w-5 h-5" />

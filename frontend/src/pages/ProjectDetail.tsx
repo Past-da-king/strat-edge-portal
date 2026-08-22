@@ -40,6 +40,7 @@ import { GanttChart } from '../components/GanttChart';
 import { Modal } from '../components/Modal';
 import { CustomSelect } from '../components/CustomSelect';
 import { DenseTable, DenseRow, DenseCell } from '../components/DenseTable';
+import { computeRating, ratingStyle } from '../constants/activityAttributes';
 
 export const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -169,6 +170,11 @@ export const ProjectDetail: React.FC = () => {
           <div>
             <div className="flex items-center gap-3 mb-0.5">
               <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none">{project.project_name}</h1>
+              {project.is_archived && (
+                <span className="px-2.5 py-1 rounded-lg bg-slate-500/10 text-slate-500 text-[9px] font-black uppercase tracking-widest border border-slate-500/20">
+                  Archived
+                </span>
+              )}
               {refreshing && <RefreshCw className="w-4 h-4 text-accent-primary animate-spin" />}
             </div>
             <p className="text-slate-500 font-bold text-[9px] uppercase tracking-[0.25em]">{project.project_number} • {project.client} • {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
@@ -381,7 +387,7 @@ export const ProjectDetail: React.FC = () => {
             <button onClick={() => setActiveModal(null)} className="w-14 h-14 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-500 transition-all border border-slate-200 dark:border-white/10 flex items-center justify-center"><X className="w-6 h-6" /></button>
           </div>
           <div className="flex-1 overflow-auto pr-4 custom-scrollbar">
-            <DenseTable headers={['Activity / Phase', 'Assigned', 'Start', 'Finish', 'Dependencies', 'Output Requirements', 'Status']}>
+            <DenseTable headers={['Activity / Phase', 'Assigned', 'Start', 'Finish', 'Dependencies', 'Output Requirements', 'Complexity', 'Input', 'Financial', 'Rating', 'Status']}>
               {tasks.map((task, i) => (
                 <DenseRow key={i}>
                   <DenseCell flex={3}><div className="py-4 px-2 font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight leading-tight text-sm">{task.activity_name}</div></DenseCell>
@@ -389,7 +395,21 @@ export const ProjectDetail: React.FC = () => {
                   <DenseCell><span className="font-mono text-xs text-slate-500">{task.planned_start}</span></DenseCell>
                   <DenseCell><span className="font-mono text-xs text-slate-500">{task.planned_finish}</span></DenseCell>
                   <DenseCell>{task.depends_on ? <div className="flex items-center gap-2 text-[10px] text-amber-500/60 font-black uppercase"><LinkIcon className="w-3.5 h-3.5" /> DEP-{task.depends_on}</div> : <span className="text-[10px] text-slate-700 font-black uppercase italic">Independent</span>}</DenseCell>
-                  <DenseCell flex={2.5}><p className="text-[11px] text-slate-500 leading-relaxed font-medium italic">{task.expected_output || 'No baseline defined.'}</p></DenseCell>
+                  <DenseCell flex={2.5} label="Output"><p className="text-[11px] text-slate-500 leading-relaxed font-medium italic">{task.expected_output || 'No baseline defined.'}</p></DenseCell>
+                  <DenseCell label="Complexity"><span className="text-[10px] font-black uppercase tracking-tight text-slate-500 dark:text-slate-400">{task.complexity || 'Medium'}</span></DenseCell>
+                  <DenseCell label="Input"><span className="text-[10px] font-black uppercase tracking-tight text-slate-500 dark:text-slate-400">{task.input_type || 'Manual'}</span></DenseCell>
+                  <DenseCell label="Financial Input"><span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${task.financial_input === 'Yes' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-slate-100 dark:bg-white/5 text-slate-600 border-slate-200 dark:border-white/5'}`}>{task.financial_input || 'No'}</span></DenseCell>
+                  <DenseCell label="Rating">
+                    {(() => {
+                      const band = task.rating_band || computeRating(task).band;
+                      const score = task.rating_score ?? computeRating(task).score;
+                      return (
+                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border ${ratingStyle(band)}`} title="Derived from complexity, input type, financial input and duration">
+                          {Number(score).toFixed(1)} · {band}
+                        </span>
+                      );
+                    })()}
+                  </DenseCell>
                   <DenseCell align="right"><span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase border ${task.status === 'Complete' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : task.status === 'Active' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-slate-100 dark:bg-white/5 text-slate-600 border-slate-200 dark:border-white/5'}`}>{task.status}</span></DenseCell>
                 </DenseRow>
               ))}

@@ -2,6 +2,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
+from .models.database import ensure_schema
 from .api import projects, auth, tasks, risks, expenditures, repository, reports, admin
 
 app = FastAPI(
@@ -9,6 +10,15 @@ app = FastAPI(
     version="2.0.0",
     description="Enterprise Project Management Portal - Decoupled Architecture"
 )
+
+@app.on_event("startup")
+def sync_schema():
+    """Keep the live database in step with the model (adds new columns only)."""
+    try:
+        ensure_schema()
+    except Exception as e:  # never let a schema check take the API down
+        print(f"WARNING: schema sync skipped: {e}")
+
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):

@@ -7,6 +7,20 @@ from typing import List
 
 router = APIRouter()
 
+@router.get("/attribute-options/")
+def get_attribute_options():
+    """Single source of truth for the activity plan drop-downs (see core/rating.py)."""
+    from ..core.rating import (
+        COMPLEXITY_OPTIONS, INPUT_TYPE_OPTIONS, FINANCIAL_INPUT_OPTIONS, DEFAULTS
+    )
+    return {
+        "complexity": COMPLEXITY_OPTIONS,
+        "input_type": INPUT_TYPE_OPTIONS,
+        "financial_input": FINANCIAL_INPUT_OPTIONS,
+        "defaults": DEFAULTS,
+    }
+
+
 @router.get("/project/{project_id}/", response_model=List[TaskSchema])
 def get_task_inventory(
     project_id: int, 

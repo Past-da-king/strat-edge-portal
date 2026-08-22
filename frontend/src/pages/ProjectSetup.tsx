@@ -17,6 +17,14 @@ import projectService from '../services/projectService';
 import authService from '../services/authService';
 import { CustomSelect } from '../components/CustomSelect';
 import { DenseTable, DenseRow, DenseCell } from '../components/DenseTable';
+import {
+  fetchAttributeOptions,
+  DEFAULT_ATTRIBUTE_OPTIONS,
+  ACTIVITY_DEFAULTS,
+  computeRating,
+  ratingStyle,
+  AttributeOptions,
+} from '../constants/activityAttributes';
 
 export const ProjectSetup: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'manual' | 'import' | 'manage'>('manual');
@@ -41,6 +49,7 @@ export const ProjectSetup: React.FC = () => {
   const [planTasks, setPlanTasks] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [isPlanLoading, setIsPlanLoading] = useState(false);
+  const [attrOptions, setAttrOptions] = useState<AttributeOptions>(DEFAULT_ATTRIBUTE_OPTIONS);
 
   const currentUser = authService.getCurrentUser();
   const isAdminExec = currentUser?.role === 'admin' || currentUser?.role === 'executive';
@@ -48,11 +57,13 @@ export const ProjectSetup: React.FC = () => {
   useEffect(() => {
     const fetchInitial = async () => {
       try {
-        const [projRes, userRes] = await Promise.all([
+        const [projRes, userRes, optRes] = await Promise.all([
           projectService.getProjects(),
-          authService.getUsers()
+          authService.getUsers(),
+          fetchAttributeOptions()
         ]);
         setProjects(projRes);
+        setAttrOptions(optRes);
         setUsers(userRes.filter((u: any) => u.status === 'approved' || u.status === 'active'));
         
         if (projRes.length > 0) setSelectedProjectId(projRes[0].project_id);
@@ -112,6 +123,9 @@ export const ProjectSetup: React.FC = () => {
       responsible_user_id: null,
       depends_on: null,
       expected_output: '',
+      complexity: ACTIVITY_DEFAULTS.complexity,
+      input_type: ACTIVITY_DEFAULTS.input_type,
+      financial_input: ACTIVITY_DEFAULTS.financial_input,
       status: 'Not Started',
       project_id: selectedProjectId
     };
@@ -296,6 +310,11 @@ export const ProjectSetup: React.FC = () => {
                         <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">End Date</th>
                         <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Budget (R)</th>
                         <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Predecessor</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Expected Output</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Complexity</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Input Type</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Financial Input</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Rating</th>
                         <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5">Status</th>
                         <th className="px-4 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-white/5"></th>
                       </tr>
@@ -353,6 +372,46 @@ export const ProjectSetup: React.FC = () => {
                               ]}
                               placeholder="None"
                             />
+                          </td>
+                          <td className="p-2 min-w-[220px]">
+                            <input
+                              type="text" value={task.expected_output || ''}
+                              onChange={e => handleUpdateTaskField(idx, 'expected_output', e.target.value)}
+                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-accent-primary/50 rounded px-2 py-2 text-xs text-slate-500 dark:text-slate-400 font-medium italic"
+                              placeholder="Deliverable / output..."
+                            />
+                          </td>
+                          <td className="p-2 w-40">
+                            <CustomSelect
+                              value={task.complexity || ACTIVITY_DEFAULTS.complexity}
+                              onChange={val => handleUpdateTaskField(idx, 'complexity', val)}
+                              options={attrOptions.complexity.map(c => ({ value: c, label: c }))}
+                            />
+                          </td>
+                          <td className="p-2 w-40">
+                            <CustomSelect
+                              value={task.input_type || ACTIVITY_DEFAULTS.input_type}
+                              onChange={val => handleUpdateTaskField(idx, 'input_type', val)}
+                              options={attrOptions.input_type.map(c => ({ value: c, label: c }))}
+                            />
+                          </td>
+                          <td className="p-2 w-32">
+                            <CustomSelect
+                              value={task.financial_input || ACTIVITY_DEFAULTS.financial_input}
+                              onChange={val => handleUpdateTaskField(idx, 'financial_input', val)}
+                              options={attrOptions.financial_input.map(c => ({ value: c, label: c }))}
+                            />
+                          </td>
+                          <td className="p-2 w-28">
+                            {(() => {
+                              const rating = computeRating(task);
+                              return (
+                                <div className={`px-3 py-2 rounded-lg border text-center ${ratingStyle(rating.band)}`} title="Derived from complexity, input type, financial input and duration">
+                                  <p className="text-sm font-black tracking-tighter leading-none">{rating.score.toFixed(1)}</p>
+                                  <p className="text-[8px] font-black uppercase tracking-widest mt-1 opacity-70">{rating.band}</p>
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="p-2 w-40">
                             <CustomSelect

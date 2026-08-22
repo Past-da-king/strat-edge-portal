@@ -22,6 +22,12 @@ class User(Base):
     password_hash = Column(String)
     role = Column(String, default="team") # admin, pm, team, executive
     status = Column(String, default="approved")
+
+    # --- Two-factor authentication (TOTP) ---
+    mfa_secret = Column(String)                 # base32 seed, set at enrolment
+    mfa_enabled = Column(Integer, default=0)    # 1 once the first code is verified
+    mfa_confirmed_at = Column(DateTime)
+
     
     projects_managed = relationship("Project", back_populates="pm", foreign_keys="Project.pm_user_id")
     tasks_assigned = relationship("Task", back_populates="responsible")
@@ -40,6 +46,15 @@ class Project(Base):
     status = Column(String, default="active")
     created_at = Column(DateTime, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.user_id"))
+
+    # --- Archive (a soft close: the project keeps all its data, it just leaves
+    # the working portfolio). archived_at is the single source of truth. ---
+    archived_at = Column(DateTime)
+    archived_by = Column(Integer, ForeignKey("users.user_id"))
+
+    @property
+    def is_archived(self) -> bool:
+        return self.archived_at is not None
 
     pm = relationship("User", back_populates="projects_managed", foreign_keys=[pm_user_id])
     creator = relationship("User", foreign_keys=[created_by])
@@ -97,6 +112,27 @@ class Task(Base):
     expected_output = Column(Text)
     depends_on = Column(Integer)
     sort_order = Column(Integer)
+
+    # --- Planning attributes (drop-downs on the activity plan) ---
+    complexity = Column(String, default="Medium")       # Low | Medium | High | Very High
+    input_type = Column(String, default="Manual")       # Manual | Hybrid | Automated | External
+    financial_input = Column(String, default="No")      # Yes | No
+
+    @property
+    def rating_score(self) -> float:
+        """1.0 - 5.0, derived from the drop-downs above plus the planned duration."""
+        from ..core.rating import compute_rating
+        score, _ = compute_rating(
+            self.complexity, self.input_type, self.financial_input,
+            self.planned_start, self.planned_finish
+        )
+        return score
+
+    @property
+    def rating_band(self) -> str:
+        from ..core.rating import band_for
+        return band_for(self.rating_score)
+
     
     project = relationship("Project", back_populates="tasks")
     responsible = relationship("User", back_populates="tasks_assigned")
@@ -174,6 +210,51 @@ class RiskProof(Base):
 
     risk = relationship("Risk", back_populates="proofs")
     uploader = relationship("User")
+
+# Columns added after the original schema shipped. Adding them here (rather than
+# in a migration tool) keeps an already-populated SQLite or Postgres database in
+# step on deploy - the check is idempotent and safe to run on every boot.
+LATER_COLUMNS = {
+    "baseline_schedule": {
+        "complexity": ("VARCHAR", "Medium"),
+        "input_type": ("VARCHAR", "Manual"),
+        "financial_input": ("VARCHAR", "No"),
+    },
+    "users": {
+        "mfa_secret": ("VARCHAR", None),
+        "mfa_enabled": ("INTEGER", 0),
+        "mfa_confirmed_at": ("TIMESTAMP", None),
+    },
+    "projects": {
+        "archived_at": ("TIMESTAMP", None),
+        "archived_by": ("INTEGER", None),
+    },
+}
+
+
+def ensure_schema():
+    """Add any columns the models have gained to an already-existing database."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+
+    with engine.begin() as conn:
+        for table, columns in LATER_COLUMNS.items():
+            if table not in tables:
+                continue
+            existing = {c["name"] for c in inspector.get_columns(table)}
+            for name, (col_type, default) in columns.items():
+                if name in existing:
+                    continue
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {col_type}"))
+                if default is not None:
+                    conn.execute(
+                        text(f"UPDATE {table} SET {name} = :val WHERE {name} IS NULL"),
+                        {"val": default},
+                    )
+                print(f"[schema] added {table}.{name}" + (f" (backfilled '{default}')" if default is not None else ""))
+
 
 def get_db():
     db = SessionLocal()

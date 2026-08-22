@@ -42,6 +42,10 @@ class ImportService:
                 'planned_start': pd.to_datetime(row.iloc[3]).date() if len(row) > 3 and pd.notna(row.iloc[3]) else None,
                 'planned_finish': pd.to_datetime(row.iloc[4]).date() if len(row) > 4 and pd.notna(row.iloc[4]) else None,
                 'budgeted_cost': float(row.iloc[5]) if len(row) > 5 and pd.notna(row.iloc[5]) else 0.0,
+                # Optional planning columns - default if the sheet does not carry them
+                'complexity': str(row.iloc[6]).strip() if len(row) > 6 and pd.notna(row.iloc[6]) else 'Medium',
+                'input_type': str(row.iloc[7]).strip() if len(row) > 7 and pd.notna(row.iloc[7]) else 'Manual',
+                'financial_input': str(row.iloc[8]).strip() if len(row) > 8 and pd.notna(row.iloc[8]) else 'No',
                 'status': 'Not Started'
             }
             

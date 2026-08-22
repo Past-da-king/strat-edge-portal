@@ -15,7 +15,7 @@ class ProjectService:
         return query.all()
 
     @staticmethod
-    def get_portfolio_metrics(db: Session, pm_id: Optional[int] = None, user_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    def get_portfolio_metrics(db: Session, pm_id: Optional[int] = None, user_id: Optional[int] = None, include_archived: bool = False) -> List[Dict[str, Any]]:
         """
         Fetches all projects and their associated metrics in a single, optimized query.
         Ported from the legacy calculations.py for high performance.
@@ -25,9 +25,12 @@ class ProjectService:
             WITH project_list AS (
                 SELECT p.* 
                 FROM projects p
-                WHERE (:pm_id IS NULL OR p.pm_user_id = :pm_id)
-                   OR (:user_id IS NULL OR EXISTS (SELECT 1 FROM project_assignments pa WHERE pa.project_id = p.project_id AND pa.user_id = :user_id))
-                   OR (:user_id IS NULL OR EXISTS (SELECT 1 FROM baseline_schedule bs WHERE bs.project_id = p.project_id AND bs.responsible_user_id = :user_id))
+                WHERE (
+                       (:pm_id IS NULL OR p.pm_user_id = :pm_id)
+                    OR (:user_id IS NULL OR EXISTS (SELECT 1 FROM project_assignments pa WHERE pa.project_id = p.project_id AND pa.user_id = :user_id))
+                    OR (:user_id IS NULL OR EXISTS (SELECT 1 FROM baseline_schedule bs WHERE bs.project_id = p.project_id AND bs.responsible_user_id = :user_id))
+                )
+                AND (:include_archived = 1 OR p.archived_at IS NULL)
             )
             SELECT 
                 pl.*,
@@ -41,7 +44,11 @@ class ProjectService:
             FROM project_list pl
         """
         
-        result = db.execute(text(query_str), {"pm_id": pm_id, "user_id": user_id})
+        result = db.execute(text(query_str), {
+            "pm_id": pm_id,
+            "user_id": user_id,
+            "include_archived": 1 if include_archived else 0,
+        })
         projects = []
         for row in result:
             row_dict = dict(row._mapping)
@@ -70,6 +77,8 @@ class ProjectService:
 
             projects.append({
                 "project_id": row_dict["project_id"],
+                "archived_at": row_dict.get("archived_at"),
+                "is_archived": row_dict.get("archived_at") is not None,
                 "project_name": row_dict["project_name"],
                 "project_number": row_dict["project_number"],
                 "client": row_dict.get("client", "N/A"),

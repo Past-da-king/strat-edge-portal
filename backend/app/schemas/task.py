@@ -12,6 +12,9 @@ class TaskBase(BaseModel):
     responsible_user_id: Optional[int] = None
     expected_output: Optional[str] = None
     depends_on: Optional[int] = None
+    complexity: Optional[str] = "Medium"
+    input_type: Optional[str] = "Manual"
+    financial_input: Optional[str] = "No"
 
 class TaskCreate(TaskBase):
     project_id: int
@@ -38,5 +41,8 @@ class Task(TaskBase):
     project_id: int
     outputs: List[TaskOutput] = []
     responsible: Optional[User] = None
+    # Derived on the model from the drop-downs + planned duration; read-only.
+    rating_score: float = 1.0
+    rating_band: str = "Low"
 
     model_config = ConfigDict(from_attributes=True)

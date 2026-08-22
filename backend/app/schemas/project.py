@@ -25,6 +25,9 @@ class Project(ProjectBase):
     project_id: int
     pm_user_id: Optional[int] = None
     created_at: datetime
+    archived_at: Optional[datetime] = None
+    archived_by: Optional[int] = None
+    is_archived: bool = False
     
     pm: Optional[User] = None
     tasks: List[Task] = []

@@ -6,6 +6,7 @@ from ..services.import_service import ImportService
 from ..schemas.project import Project as ProjectSchema, ProjectCreate, ProjectUpdate
 from .deps import get_current_user, get_current_active_admin
 from typing import List, Any
+from datetime import datetime
 
 router = APIRouter()
 
@@ -20,10 +21,74 @@ async def import_project(
 
 @router.get("/", response_model=List[Any])
 def list_projects(
+    include_archived: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return ProjectService.get_portfolio_metrics(db)
+    """Archived projects are left out unless they are explicitly asked for."""
+    return ProjectService.get_portfolio_metrics(db, include_archived=include_archived)
+
+
+@router.post("/{project_id}/archive/", response_model=ProjectSchema)
+def archive_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_admin)
+):
+    """
+    Close a project without destroying it: it drops out of the portfolio and the
+    project pickers, keeps every activity, document, risk and expenditure, and
+    can be restored at any time. This is the safe alternative to Delete.
+    """
+    project = db.query(Project).filter(Project.project_id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if project.archived_at:
+        raise HTTPException(status_code=400, detail="Project is already archived")
+
+    project.archived_at = datetime.utcnow()
+    project.archived_by = current_user.user_id
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+
+    from ..core.audit import log_event
+    log_event(
+        db,
+        event_type="ARCHIVE",
+        category="PROJECT",
+        description=f"Archived project: {project.project_name} ({project.project_number})",
+        user_id=current_user.user_id
+    )
+    return project
+
+
+@router.post("/{project_id}/restore/", response_model=ProjectSchema)
+def restore_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_admin)
+):
+    """Bring an archived project back into the live portfolio."""
+    project = db.query(Project).filter(Project.project_id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project.archived_at = None
+    project.archived_by = None
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+
+    from ..core.audit import log_event
+    log_event(
+        db,
+        event_type="RESTORE",
+        category="PROJECT",
+        description=f"Restored project: {project.project_name} ({project.project_number})",
+        user_id=current_user.user_id
+    )
+    return project
 
 @router.get("/{project_id}/", response_model=ProjectSchema)
 def read_project(
