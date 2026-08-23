@@ -9,7 +9,16 @@ connect_args = {}
 if settings.DATABASE_URL.startswith("sqlite"):
     connect_args["check_same_thread"] = False
 
-engine = create_engine(settings.DATABASE_URL, connect_args=connect_args)
+# Render idles the service and the database drops idle connections with it, so the
+# first request after a quiet spell was landing on a dead connection and 500ing.
+# pool_pre_ping checks a connection before handing it out and reconnects if it is
+# stale; pool_recycle retires them before the server does it for us.
+engine = create_engine(
+    settings.DATABASE_URL,
+    connect_args=connect_args,
+    pool_pre_ping=True,
+    pool_recycle=300,
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
