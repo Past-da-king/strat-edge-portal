@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, Eye, EyeOff, Sun, Moon, Loader2, ShieldCheck, ArrowLeft, Copy, Check } from 'lucide-react';
+import { LogIn, Eye, EyeOff, Sun, Moon, Loader2, ShieldCheck, ArrowLeft, Copy, Check, KeyRound } from 'lucide-react';
 import authService from '../services/authService';
 
 type Stage = 'credentials' | 'enrol' | 'code';
@@ -18,6 +18,29 @@ export const Login: React.FC = () => {
   const [code, setCode] = useState('');
   const [enrolment, setEnrolment] = useState<{ qr_data_uri: string; secret: string } | null>(null);
   const [secretCopied, setSecretCopied] = useState(false);
+
+  const [ssoEnabled, setSsoEnabled] = useState(false);
+  const [showLocal, setShowLocal] = useState(false);
+
+  useEffect(() => {
+    authService.ssoConfig().then((c) => setSsoEnabled(Boolean(c.enabled)));
+  }, []);
+
+  // Hand the browser to Strat Edge ID. The verifier stays here until the code
+  // comes back, which is what makes a stolen code useless on its own.
+  const startSso = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const { authorize_url, code_verifier } = await authService.ssoStart();
+      sessionStorage.setItem('sso_verifier', code_verifier);
+      window.location.href = authorize_url;
+    } catch (err: any) {
+      setError('Could not reach Strat Edge ID. Use your portal password below.');
+      setShowLocal(true);
+      setLoading(false);
+    }
+  };
 
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -157,7 +180,31 @@ export const Login: React.FC = () => {
           {stage === 'credentials' && (
             <>
               <h2 className="text-xl font-black text-slate-900 dark:text-white mb-8 uppercase tracking-tight text-center">System Authentication</h2>
-              <form onSubmit={handleLogin} className="space-y-6">
+
+              {ssoEnabled && (
+                <div className="mb-8">
+                  <button
+                    onClick={startSso}
+                    disabled={loading}
+                    className="w-full bg-accent-primary hover:bg-accent-secondary text-white font-black py-5 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-accent-primary/20 uppercase tracking-[0.2em] text-xs disabled:opacity-50"
+                  >
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><KeyRound className="w-4 h-4" /> Sign in with Strat Edge ID</>}
+                  </button>
+                  <p className="mt-3 text-center text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
+                    One account for every Strat Edge application
+                  </p>
+                  {!showLocal && (
+                    <button
+                      onClick={() => setShowLocal(true)}
+                      className="w-full mt-6 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-accent-primary transition-colors"
+                    >
+                      Use a portal password instead
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <form onSubmit={handleLogin} className={`space-y-6 ${ssoEnabled && !showLocal ? 'hidden' : ''}`}>
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 px-1">Access Identity</label>
                   <input

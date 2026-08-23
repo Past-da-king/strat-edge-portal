@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
 from .models.database import ensure_schema
-from .api import projects, auth, tasks, risks, expenditures, repository, reports, admin
+from .api import projects, auth, tasks, risks, expenditures, repository, reports, admin, sso
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -38,6 +38,7 @@ app.add_middleware(
 
 # Include Routers
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+app.include_router(sso.router, prefix="/auth/sso", tags=["Single Sign-On"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])
 app.include_router(projects.router, prefix="/projects", tags=["Projects"])
 app.include_router(tasks.router, prefix="/tasks", tags=["Tasks"])

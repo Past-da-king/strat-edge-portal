@@ -32,7 +32,13 @@ class User(Base):
     role = Column(String, default="team") # admin, pm, team, executive
     status = Column(String, default="approved")
 
+    # --- Strat Edge ID (single sign-on) ---
+    email = Column(String, index=True)          # how ID matches a person to this row
+    identity_id = Column(String, index=True)    # their id in Strat Edge ID
+
     # --- Two-factor authentication (TOTP) ---
+    # Only used by the local username/password fallback; people who arrive
+    # through ID have already cleared a second factor there.
     mfa_secret = Column(String)                 # base32 seed, set at enrolment
     mfa_enabled = Column(Integer, default=0)    # 1 once the first code is verified
     mfa_confirmed_at = Column(DateTime)
@@ -230,6 +236,8 @@ LATER_COLUMNS = {
         "financial_input": ("VARCHAR", "No"),
     },
     "users": {
+        "email": ("VARCHAR", None),
+        "identity_id": ("VARCHAR", None),
         "mfa_secret": ("VARCHAR", None),
         "mfa_enabled": ("INTEGER", 0),
         "mfa_confirmed_at": ("TIMESTAMP", None),

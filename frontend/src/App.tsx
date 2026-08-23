@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import DashboardLayout from './components/DashboardLayout'
 import { Login } from './pages/Login'
+import { AuthCallback } from './pages/AuthCallback'
 import { Projects } from './pages/Projects'
 import { Risks } from './pages/Risks'
 import { Repository } from './pages/Repository'
@@ -31,6 +32,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
         <Route path="/" element={
           <PrivateRoute>

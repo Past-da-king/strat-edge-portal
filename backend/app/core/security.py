@@ -60,6 +60,10 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[mod
     user = db.query(models.User).filter(models.User.username == username).first()
     if not user:
         return None
+    # Accounts that arrive through Strat Edge ID have no local password at all.
+    # Without this guard the hash check raises instead of simply refusing.
+    if not user.password_hash:
+        return None
     if not verify_password(password, user.password_hash):
         return None
     return user

@@ -58,6 +58,30 @@ export const resetUserMfa = async (userId: number) => {
   return response.data;
 };
 
+/** Where Strat Edge ID wants the browser sent, plus the verifier to hold onto. */
+export const ssoStart = async () => {
+  const response = await api.get(`auth/sso/start/`);
+  return response.data as { authorize_url: string; code_verifier: string; state: string };
+};
+
+export const ssoConfig = async () => {
+  try {
+    const response = await api.get(`auth/sso/config/`);
+    return response.data as { enabled: boolean; id_base_url: string };
+  } catch {
+    return { enabled: false, id_base_url: "" };
+  }
+};
+
+/** Swap the one-time code for a portal session. */
+export const ssoCallback = async (code: string, codeVerifier: string) => {
+  const response = await api.post(`auth/sso/callback/`, { code, code_verifier: codeVerifier });
+  if (response.data.access_token) {
+    localStorage.setItem('user', JSON.stringify(response.data));
+  }
+  return response.data;
+};
+
 export const logout = () => {
   localStorage.removeItem('user');
 };
@@ -97,6 +121,9 @@ export const updateMyProfile = async (data: { username?: string, full_name?: str
 
 const authService = {
   login,
+  ssoStart,
+  ssoConfig,
+  ssoCallback,
   mfaSetup,
   mfaVerify,
   resetUserMfa,
