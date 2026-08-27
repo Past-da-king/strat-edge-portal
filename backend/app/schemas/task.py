@@ -15,6 +15,13 @@ class TaskBase(BaseModel):
     complexity: Optional[str] = "Medium"
     input_type: Optional[str] = "Manual"
     financial_input: Optional[str] = "No"
+    # Carried over from the written project plan.
+    kpi: Optional[str] = None
+    critical_path: Optional[str] = None
+    financial_input_type: Optional[str] = None
+    implementing_agent: Optional[str] = None
+    responsible_names: Optional[str] = None
+    plan_seq: Optional[int] = None
 
 class TaskCreate(TaskBase):
     project_id: int
