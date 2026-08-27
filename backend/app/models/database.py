@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey, Text, DateTime, func
+from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey, Text, DateTime, func, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from ..core.config import settings
@@ -133,6 +133,17 @@ class Task(Base):
     input_type = Column(String, default="Manual")       # Manual | Hybrid | Automated | External
     financial_input = Column(String, default="No")      # Yes | No
 
+    # --- Carried over from the written project plan so an imported plan keeps
+    # every column it had on paper. Free text: the plans use their own wording. ---
+    kpi = Column(Text)                                  # Key Performance Indicator
+    critical_path = Column(String)                      # Y | N (and the plans' own notes)
+    financial_input_type = Column(String)               # what the money is for
+    implementing_agent = Column(String)                 # how the work gets done, plan's wording
+    responsible_names = Column(String)                  # the plan's own "Person Responsible"
+                                                        # cell, kept verbatim because it often
+                                                        # names several people and their part
+    plan_seq = Column(Integer)                          # the "#" the activity has on paper
+
     @property
     def rating_score(self) -> float:
         """1.0 - 5.0, derived from the drop-downs above plus the planned duration."""
@@ -152,6 +163,9 @@ class Task(Base):
     project = relationship("Project", back_populates="tasks")
     responsible = relationship("User", back_populates="tasks_assigned")
     outputs = relationship("TaskOutput", back_populates="task")
+    weekly_logs = relationship("WeeklyLog", back_populates="activity",
+                               cascade="all, delete-orphan",
+                               order_by="WeeklyLog.week_start")
 
 class TaskOutput(Base):
     __tablename__ = "task_outputs"
@@ -165,6 +179,44 @@ class TaskOutput(Base):
     doc_type = Column(String, default="Draft")
 
     task = relationship("Task", back_populates="outputs")
+
+class WeeklyLog(Base):
+    """One person's write-up of ONE activity for ONE week.
+
+    The baseline schedule says what was PLANNED. This says what actually
+    happened, in the words of the person doing it, while it is still happening -
+    so a stalled activity is visible in the week it stalls rather than at the
+    end of the project. Weeks are identified by their Monday (week_start), so
+    two people logging "this week" always land on the same week.
+    """
+
+    __tablename__ = "weekly_logs"
+    __table_args__ = (UniqueConstraint("activity_id", "week_start", name="uq_weekly_log_activity_week"),)
+
+    log_id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.project_id"), nullable=False, index=True)
+    activity_id = Column(Integer, ForeignKey("baseline_schedule.activity_id"), nullable=False, index=True)
+    week_start = Column(Date, nullable=False, index=True)   # always a Monday
+
+    work_done = Column(Text)          # what was actually done this week
+    blockers = Column(Text)           # what stopped it, if anything
+    next_steps = Column(Text)         # what happens next week
+    progress_status = Column(String, default="On Track")   # see PROGRESS_STATUSES
+    percent_complete = Column(Integer, default=0)
+
+    logged_by = Column(Integer, ForeignKey("users.user_id"))
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    activity = relationship("Task", back_populates="weekly_logs")
+    project = relationship("Project")
+    author = relationship("User", foreign_keys=[logged_by])
+
+
+# The only answers the weekly log accepts. "Not Worked On" is deliberately one
+# of them: a week where nothing happened is the most important week to record.
+PROGRESS_STATUSES = ["On Track", "Delayed", "Blocked", "Not Worked On", "Completed"]
+
 
 class Expenditure(Base):
     __tablename__ = "expenditure_log"
@@ -234,6 +286,12 @@ LATER_COLUMNS = {
         "complexity": ("VARCHAR", "Medium"),
         "input_type": ("VARCHAR", "Manual"),
         "financial_input": ("VARCHAR", "No"),
+        "kpi": ("TEXT", None),
+        "critical_path": ("VARCHAR", None),
+        "financial_input_type": ("VARCHAR", None),
+        "implementing_agent": ("VARCHAR", None),
+        "responsible_names": ("VARCHAR", None),
+        "plan_seq": ("INTEGER", None),
     },
     "users": {
         "email": ("VARCHAR", None),
@@ -249,12 +307,26 @@ LATER_COLUMNS = {
 }
 
 
+# Tables introduced after the original schema shipped. create_all only touches
+# what is missing, so this is safe to run against a populated database.
+LATER_TABLES = ["weekly_logs"]
+
+
 def ensure_schema():
-    """Add any columns the models have gained to an already-existing database."""
+    """Bring an already-existing database up to the model: new tables, new columns."""
     from sqlalchemy import inspect, text
 
     inspector = inspect(engine)
     tables = set(inspector.get_table_names())
+
+    missing = [Base.metadata.tables[t] for t in LATER_TABLES
+               if t not in tables and t in Base.metadata.tables]
+    if missing:
+        Base.metadata.create_all(bind=engine, tables=missing)
+        for t in missing:
+            print(f"[schema] created table {t.name}")
+        inspector = inspect(engine)
+        tables = set(inspector.get_table_names())
 
     with engine.begin() as conn:
         for table, columns in LATER_COLUMNS.items():

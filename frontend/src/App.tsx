@@ -14,6 +14,7 @@ import { RecordExpenditure } from './pages/RecordExpenditure'
 import { Monitoring } from './pages/Monitoring'
 import { Overview } from './pages/Overview'
 import { UserSettings } from './pages/UserSettings'
+import { WeeklyLog } from './pages/WeeklyLog'
 
 const PrivateRoute = ({ children, roles }: { children: React.ReactNode, roles?: string[] }) => {
   const userStr = localStorage.getItem('user');
@@ -70,6 +71,14 @@ function App() {
           <PrivateRoute>
             <DashboardLayout>
               <RecordActivity />
+            </DashboardLayout>
+          </PrivateRoute>
+        } />
+
+        <Route path="/weekly-log" element={
+          <PrivateRoute>
+            <DashboardLayout>
+              <WeeklyLog />
             </DashboardLayout>
           </PrivateRoute>
         } />
