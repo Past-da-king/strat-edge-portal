@@ -202,3 +202,82 @@ async def restore_backup(
                 raise HTTPException(status_code=400, detail="Invalid backup format: No database file found.")
     except zipfile.BadZipFile:
         raise HTTPException(status_code=400, detail="Invalid zip file.")
+
+
+# --- Project plan import -----------------------------------------------------
+# The two written plans ship with the portal as data/plan_*.json. This runs the
+# SAME importer the CLI runs (backend/import_plan.py), so there is one code path
+# and no second, drifting copy. Idempotent: re-running updates rather than
+# duplicating. Dry run by default - nothing is written unless commit=true.
+
+class ImportPlanRequest(BaseModel):
+    plan: str            # "erp" | "mthashana"
+    commit: bool = False
+
+
+def _importer():
+    """import_plan.py sits at the backend root, beside app/. Render starts uvicorn
+    from there so it is usually importable already, but do not rely on cwd."""
+    import sys
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    import import_plan
+    return import_plan
+
+
+@router.get("/plans/", status_code=status.HTTP_200_OK)
+def list_bundled_plans(current_user: User = Depends(get_current_active_admin)):
+    """What can be imported, and how big each one is."""
+    import json as _json
+    BUNDLED_PLANS = _importer().BUNDLED_PLANS
+
+    out = []
+    for key, path in BUNDLED_PLANS.items():
+        if not os.path.exists(path):
+            continue
+        doc = _json.load(open(path, encoding="utf-8"))
+        out.append({
+            "key": key,
+            "project_name": doc["project"]["project_name"],
+            "project_number": doc["project"]["project_number"],
+            "activities": len(doc["activities"]),
+        })
+    return {"plans": out}
+
+
+@router.post("/plans/import/", status_code=status.HTTP_200_OK)
+def import_bundled_plan(
+    payload: ImportPlanRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_admin),
+):
+    """Load a written project plan into the portal.
+
+    Run it once with commit=false first: the result names every person on the
+    plan who has no portal account, whose activities would import unassigned.
+    """
+    mod = _importer()
+    BUNDLED_PLANS, apply_plan = mod.BUNDLED_PLANS, mod.apply_plan
+
+    path = BUNDLED_PLANS.get(payload.plan)
+    if not path or not os.path.exists(path):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown plan '{payload.plan}'. Known: {sorted(BUNDLED_PLANS)}",
+        )
+
+    result = apply_plan(db, path, payload.commit)
+
+    if payload.commit:
+        log_event(
+            db,
+            event_type="IMPORT",
+            category="PROJECT",
+            description=f"Imported project plan {result['project_number']} "
+                        f"({result['created']} new, {result['updated']} updated activities)",
+            user_id=current_user.user_id,
+            metadata={k: result[k] for k in
+                      ("plan", "project_number", "created", "updated", "unassigned")},
+        )
+    return result

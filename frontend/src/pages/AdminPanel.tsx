@@ -38,6 +38,13 @@ export const AdminPanel: React.FC = () => {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+
+  // Project plan import. The written plans ship with the portal; a dry run
+  // first shows who on the plan has no portal account, because those
+  // activities import unassigned.
+  const [plans, setPlans] = useState<any[]>([]);
+  const [planBusy, setPlanBusy] = useState<string | null>(null);
+  const [planResult, setPlanResult] = useState<any | null>(null);
   
   // Toast State
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
@@ -53,9 +60,33 @@ export const AdminPanel: React.FC = () => {
     setTimeout(() => setToast({ ...toast, show: false }), 4000);
   };
 
+  const loadPlans = async () => {
+    try {
+      const r = await api.get('/admin/plans/');
+      setPlans(r.data.plans || []);
+    } catch { setPlans([]); }
+  };
+
+  const runPlanImport = async (key: string, commit: boolean) => {
+    setPlanBusy(key + (commit ? ':commit' : ':dry'));
+    setPlanResult(null);
+    try {
+      const r = await api.post('/admin/plans/import/', { plan: key, commit });
+      setPlanResult(r.data);
+      triggerToast(commit
+        ? `Imported: ${r.data.created} new, ${r.data.updated} updated`
+        : `Dry run: ${r.data.activities_total} activities, nothing written`);
+    } catch (e: any) {
+      triggerToast(e?.response?.data?.detail || 'Import failed', 'error');
+    } finally {
+      setPlanBusy(null);
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
+      if (activeTab === 'database') loadPlans();
       if (activeTab === 'users') {
         const data = await authService.getUsers();
         setUsers(data);
@@ -275,6 +306,76 @@ export const AdminPanel: React.FC = () => {
             <div className="space-y-4">
               <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">System Lifecycle</h3>
               <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Mission critical database & storage operations</p>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[2rem] p-8 space-y-6 shadow-sm">
+              <div className="flex items-start gap-5">
+                <div className="w-14 h-14 shrink-0 bg-accent-primary/10 rounded-2xl flex items-center justify-center text-accent-primary">
+                  <Upload className="w-7 h-7" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Project Plans</h4>
+                  <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+                    Load a written project plan into the portal with its activities, dates, KPIs and
+                    dependencies. Safe to run twice — it updates rather than duplicating. Run the dry
+                    run first: it names anyone on the plan without a portal account, whose activities
+                    would come in unassigned.
+                  </p>
+                </div>
+              </div>
+
+              {plans.length === 0 && (
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">No bundled plans found</p>
+              )}
+
+              <div className="space-y-3">
+                {plans.map((pl: any) => (
+                  <div key={pl.key} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-accent-secondary">{pl.project_number}</p>
+                      <p className="font-black text-slate-800 dark:text-slate-100 tracking-tight truncate">{pl.project_name}</p>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mt-1">{pl.activities} activities</p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        onClick={() => runPlanImport(pl.key, false)}
+                        disabled={!!planBusy}
+                        className="px-5 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:border-accent-primary hover:text-accent-primary disabled:opacity-40 transition-all"
+                      >
+                        {planBusy === pl.key + ':dry' ? 'Checking…' : 'Dry Run'}
+                      </button>
+                      <button
+                        onClick={() => runPlanImport(pl.key, true)}
+                        disabled={!!planBusy}
+                        className="px-5 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] bg-accent-primary text-white hover:opacity-90 disabled:opacity-40 transition-all"
+                      >
+                        {planBusy === pl.key + ':commit' ? 'Importing…' : 'Import'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {planResult && (
+                <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-5 space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    {planResult.committed ? 'Imported' : 'Dry run — nothing written'} · {planResult.project_number}
+                  </p>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    {planResult.created} new, {planResult.updated} updated, of {planResult.activities_total} activities.
+                  </p>
+                  {planResult.unassigned?.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 mt-3">No portal account — imports unassigned</p>
+                      <ul className="mt-1 space-y-1">
+                        {planResult.unassigned.map((u: any) => (
+                          <li key={u.name} className="text-xs text-slate-500">{u.name} — {u.activities} activities</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

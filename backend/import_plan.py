@@ -125,15 +125,34 @@ def resolve_user(db, cell: str, cache: dict):
     return match, canonical
 
 
-def import_plan(path: str, commit: bool) -> int:
+PLAN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+
+# The plans that ship with the portal, so the admin screen can offer them by name.
+BUNDLED_PLANS = {
+    "erp": os.path.join(PLAN_DIR, "plan_erp.json"),
+    "mthashana": os.path.join(PLAN_DIR, "plan_mthashana.json"),
+}
+
+
+def apply_plan(db, path: str, commit: bool) -> dict:
+    """Load one plan file into an OPEN session and return a summary.
+
+    Split out from the CLI so the admin endpoint can run exactly the same
+    import against the live database instead of a second, drifting copy.
+    """
     doc = json.load(open(path, encoding="utf-8"))
     meta, activities = doc["project"], doc["activities"]
 
-    db = SessionLocal()
     cache: dict = {}
     unmatched: dict = {}
     created_activities = updated_activities = 0
-    try:
+    lines: list = []
+
+    def say(msg):
+        lines.append(msg)
+        print(msg)
+
+    if True:
         project = (
             db.query(Project).filter(Project.project_number == meta["project_number"]).first()
         )
@@ -141,11 +160,11 @@ def import_plan(path: str, commit: bool) -> int:
         ends = [d for d in (parse_date(a.get("finish")) for a in activities) if d]
 
         if project:
-            print(f"Project {meta['project_number']} already exists (id {project.project_id}) - updating")
+            say(f"Project {meta['project_number']} already exists (id {project.project_id}) - updating")
         else:
             project = Project(project_number=meta["project_number"])
             db.add(project)
-            print(f"Creating project {meta['project_number']}")
+            say(f"Creating project {meta['project_number']}")
         project.project_name = meta["project_name"]
         project.client = meta.get("client")
         project.start_date = min(starts) if starts else None
@@ -196,21 +215,41 @@ def import_plan(path: str, commit: bool) -> int:
 
         stale = [t for seq, t in existing.items() if seq not in seen]
         if stale:
-            print(f"  ! {len(stale)} activity/activities are in the portal but not in this plan "
-                  f"- left untouched: {[t.activity_name for t in stale]}")
+            say(f"  ! {len(stale)} activity/activities are in the portal but not in this plan "
+                f"- left untouched: {[t.activity_name for t in stale]}")
 
-        print(f"  activities: {created_activities} new, {updated_activities} updated")
+        say(f"  activities: {created_activities} new, {updated_activities} updated")
         if unmatched:
-            print("  ! no portal account matches these names - activities left unassigned:")
+            say("  ! no portal account matches these names - activities left unassigned:")
             for name, n in sorted(unmatched.items()):
-                print(f"      {name} ({n} activities)")
+                say(f"      {name} ({n} activities)")
 
         if commit:
             db.commit()
-            print(f"  COMMITTED -> project_id {project.project_id}")
+            say(f"  COMMITTED -> project_id {project.project_id}")
         else:
             db.rollback()
-            print("  DRY RUN - nothing written. Re-run with --commit to apply.")
+            say("  DRY RUN - nothing written. Re-run with --commit to apply.")
+
+        return {
+            "plan": os.path.basename(path),
+            "project_number": meta["project_number"],
+            "project_name": meta["project_name"],
+            "project_id": project.project_id if commit else None,
+            "activities_total": len(activities),
+            "created": created_activities,
+            "updated": updated_activities,
+            "unassigned": [{"name": n, "activities": c} for n, c in sorted(unmatched.items())],
+            "committed": bool(commit),
+            "log": lines,
+        }
+
+
+def import_plan(path: str, commit: bool) -> int:
+    """CLI wrapper: its own session, prints, returns a process exit code."""
+    db = SessionLocal()
+    try:
+        apply_plan(db, path, commit)
         return 0
     finally:
         db.close()
