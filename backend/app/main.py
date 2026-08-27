@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
 from .models.database import ensure_schema
-from .api import projects, auth, tasks, risks, expenditures, repository, reports, admin, sso, weekly_logs
+from .api import projects, auth, tasks, risks, expenditures, repository, reports, admin, sso, status_feedback
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -46,7 +46,7 @@ app.include_router(risks.router, prefix="/risks", tags=["Risks"])
 app.include_router(expenditures.router, prefix="/expenditures", tags=["Expenditures"])
 app.include_router(repository.router, prefix="/repository", tags=["Repository"])
 app.include_router(reports.router, prefix="/reports", tags=["Reports"])
-app.include_router(weekly_logs.router, prefix="/weekly-logs", tags=["Weekly Log"])
+app.include_router(status_feedback.router, prefix="/status-feedback", tags=["Status Feedback"])
 
 @app.get("/health")
 def health_check():

@@ -163,9 +163,9 @@ class Task(Base):
     project = relationship("Project", back_populates="tasks")
     responsible = relationship("User", back_populates="tasks_assigned")
     outputs = relationship("TaskOutput", back_populates="task")
-    weekly_logs = relationship("WeeklyLog", back_populates="activity",
+    status_feedback = relationship("StatusFeedback", back_populates="activity",
                                cascade="all, delete-orphan",
-                               order_by="WeeklyLog.week_start")
+                               order_by="StatusFeedback.week_start")
 
 class TaskOutput(Base):
     __tablename__ = "task_outputs"
@@ -180,7 +180,7 @@ class TaskOutput(Base):
 
     task = relationship("Task", back_populates="outputs")
 
-class WeeklyLog(Base):
+class StatusFeedback(Base):
     """One person's write-up of ONE activity for ONE week.
 
     The baseline schedule says what was PLANNED. This says what actually
@@ -190,8 +190,8 @@ class WeeklyLog(Base):
     two people logging "this week" always land on the same week.
     """
 
-    __tablename__ = "weekly_logs"
-    __table_args__ = (UniqueConstraint("activity_id", "week_start", name="uq_weekly_log_activity_week"),)
+    __tablename__ = "status_feedback"
+    __table_args__ = (UniqueConstraint("activity_id", "week_start", name="uq_status_feedback_activity_week"),)
 
     log_id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.project_id"), nullable=False, index=True)
@@ -208,12 +208,12 @@ class WeeklyLog(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    activity = relationship("Task", back_populates="weekly_logs")
+    activity = relationship("Task", back_populates="status_feedback")
     project = relationship("Project")
     author = relationship("User", foreign_keys=[logged_by])
 
 
-# The only answers the weekly log accepts. "Not Worked On" is deliberately one
+# The only answers status feedback accepts. "Not Worked On" is deliberately one
 # of them: a week where nothing happened is the most important week to record.
 PROGRESS_STATUSES = ["On Track", "Delayed", "Blocked", "Not Worked On", "Completed"]
 
@@ -309,7 +309,7 @@ LATER_COLUMNS = {
 
 # Tables introduced after the original schema shipped. create_all only touches
 # what is missing, so this is safe to run against a populated database.
-LATER_TABLES = ["weekly_logs"]
+LATER_TABLES = ["status_feedback"]
 
 
 def ensure_schema():

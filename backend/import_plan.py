@@ -13,7 +13,7 @@ Run it twice and nothing duplicates: the project is matched on project_number
 and each activity on (project, plan_seq), so a re-run updates the row it made
 last time. Nothing is ever deleted - an activity that has since been removed
 from the paper plan is reported, not dropped, because it may already carry
-uploads, spend and weekly logs.
+uploads, spend and status feedback.
 """
 
 import argparse

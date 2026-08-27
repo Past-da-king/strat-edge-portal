@@ -1,8 +1,8 @@
-"""End-to-end proof of the weekly activity log and the project-plan import.
+"""End-to-end proof of status feedback and the project-plan import.
 
 Runs against the real routers over HTTP and a throwaway SQLite database.
 
-Run:  cd backend && PYTHONPATH=. .venv/bin/python tests/test_weekly_log_and_plan_import.py
+Run:  cd backend && PYTHONPATH=. .venv/bin/python tests/test_status_feedback_and_plan_import.py
 """
 
 import os, secrets, tempfile, json, subprocess, sys
@@ -18,9 +18,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from jose import jwt
 
-from app.models.database import Base, engine, SessionLocal, User, Project, Task, WeeklyLog, ensure_schema
+from app.models.database import Base, engine, SessionLocal, User, Project, Task, StatusFeedback, ensure_schema
 from app.core.security import get_password_hash, ALGORITHM
-from app.api import weekly_logs
+from app.api import status_feedback
 
 Base.metadata.create_all(bind=engine)
 ensure_schema()
@@ -42,7 +42,7 @@ for u in (owner, ayanda, boss, bongani):
     db.refresh(u)
 
 app = FastAPI()
-app.include_router(weekly_logs.router, prefix="/weekly-logs")
+app.include_router(status_feedback.router, prefix="/status-feedback")
 c = TestClient(app)
 
 
@@ -68,6 +68,11 @@ def check(label, cond):
 
 # --------------------------------------------------------------- plan import
 print("\n--- PROJECT PLAN IMPORT ---")
+
+# The importer runs in its own process against the same SQLite file. This
+# session is still holding a read transaction from the refreshes above, and
+# SQLite will make the child block on it until it times out - so let go first.
+db.rollback()
 
 env = dict(os.environ, PYTHONPATH=ROOT)
 res = subprocess.run(
@@ -116,6 +121,7 @@ check("every Mthashana activity found an owner",
 
 # Idempotence: run it again, nothing should double up.
 before = db.query(Task).count()
+db.rollback()          # same reason as above - do not hold a lock over the child
 subprocess.run(
     [sys.executable, os.path.join(ROOT, "import_plan.py"),
      os.path.join(ROOT, "data", "plan_erp.json"),
@@ -126,14 +132,14 @@ db.expire_all()
 check(f"re-import creates nothing new ({before} activities before and after)",
       db.query(Task).count() == before)
 
-# ---------------------------------------------------------------- weekly log
-print("\n--- WEEKLY ACTIVITY LOG ---")
+# ------------------------------------------------------------ status feedback
+print("\n--- STATUS FEEDBACK ---")
 
 # A week in the middle of the ERP plan, named by its Monday.
 week = date(2026, 9, 7)               # a Monday
 midweek = date(2026, 9, 10)           # the Thursday of the same week
 
-r = c.get("/weekly-logs/my-week/", params={"week_start": str(week)}, headers=hdr(owner))
+r = c.get("/status-feedback/my-week/", params={"week_start": str(week)}, headers=hdr(owner))
 check("my-week returns 200", r.status_code == 200)
 board = r.json()
 check("week is named by its Monday", board["week_start"] == str(week))
@@ -148,7 +154,7 @@ done = next(t for t in erp_tasks if t.plan_seq == 21)   # Feb 2027, well outside
 check("an activity outside the week is not", done.activity_id not in due_ids)
 
 # A day that is not a Monday still lands on that week's log.
-r = c.post("/weekly-logs/", headers=hdr(owner), json={
+r = c.post("/status-feedback/", headers=hdr(owner), json={
     "activity_id": seg.activity_id, "week_start": str(midweek),
     "work_done": "Pulled 34 of the 50 prospects; the rest need the industry filter.",
     "blockers": "Waiting on the paid data source - no budget approval yet.",
@@ -160,7 +166,7 @@ check("mid-week date snapped to Monday", r.json()["week_start"] == str(week))
 log_id = r.json()["log_id"]
 
 # Same activity, same week, submitted again -> edits, does not stack.
-r = c.post("/weekly-logs/", headers=hdr(owner), json={
+r = c.post("/status-feedback/", headers=hdr(owner), json={
     "activity_id": seg.activity_id, "week_start": str(week),
     "work_done": "Pulled all 50 prospects.", "blockers": "",
     "progress_status": "On Track", "percent_complete": 100,
@@ -168,13 +174,13 @@ r = c.post("/weekly-logs/", headers=hdr(owner), json={
 check("re-submitting the same week edits it", r.status_code == 201 and r.json()["log_id"] == log_id)
 db.expire_all()
 check("one row per activity per week",
-      db.query(WeeklyLog).filter(WeeklyLog.activity_id == seg.activity_id).count() == 1)
+      db.query(StatusFeedback).filter(StatusFeedback.activity_id == seg.activity_id).count() == 1)
 
 db.expire_all()
 check("first log moves a Not Started activity to Active",
       db.query(Task).filter(Task.activity_id == seg.activity_id).first().status == "Active")
 
-r = c.get("/weekly-logs/my-week/", params={"week_start": str(week)}, headers=hdr(owner))
+r = c.get("/status-feedback/my-week/", params={"week_start": str(week)}, headers=hdr(owner))
 check("the week now counts one write-up", r.json()["logged"] == 1)
 logged = next(a for a in r.json()["activities"] if a["activity_id"] == seg.activity_id)
 check("the log comes back with the activity", logged["log"]["percent_complete"] == 100)
@@ -184,21 +190,21 @@ check("author is named", logged["log"]["author"]["full_name"] == "Siphelele Mofo
 other = next(t for t in erp_tasks
              if t.responsible_user_id == owner.user_id and t.activity_id in due_ids
              and t.activity_id != seg.activity_id)
-r = c.post("/weekly-logs/", headers=hdr(owner), json={
+r = c.post("/status-feedback/", headers=hdr(owner), json={
     "activity_id": other.activity_id, "week_start": str(week),
     "work_done": "", "blockers": "Client postponed the workshop to next month.",
     "progress_status": "Not Worked On", "percent_complete": 0,
 })
 check("a 'Not Worked On' week is accepted", r.status_code == 201)
 
-r = c.post("/weekly-logs/", headers=hdr(owner), json={
+r = c.post("/status-feedback/", headers=hdr(owner), json={
     "activity_id": other.activity_id, "week_start": str(week),
     "work_done": "   ", "progress_status": "On Track", "percent_complete": 10,
 })
 check("an empty write-up is refused unless the week is marked Not Worked On",
       r.status_code == 422)
 
-r = c.post("/weekly-logs/", headers=hdr(owner), json={
+r = c.post("/status-feedback/", headers=hdr(owner), json={
     "activity_id": seg.activity_id, "week_start": str(week),
     "work_done": "x", "progress_status": "Vibes", "percent_complete": 10,
 })
@@ -206,13 +212,13 @@ check("an unknown progress status is refused", r.status_code == 422)
 
 # Someone else's activity is not yours to report on.
 mine_not = next(t for t in erp_tasks if t.responsible_user_id == ayanda.user_id)
-r = c.post("/weekly-logs/", headers=hdr(owner), json={
+r = c.post("/status-feedback/", headers=hdr(owner), json={
     "activity_id": mine_not.activity_id, "week_start": str(week),
     "work_done": "I did this actually", "progress_status": "On Track", "percent_complete": 50,
 })
 check("you cannot log against someone else's activity", r.status_code == 403)
 
-r = c.post("/weekly-logs/", headers=hdr(boss), json={
+r = c.post("/status-feedback/", headers=hdr(boss), json={
     "activity_id": mine_not.activity_id, "week_start": str(week),
     "work_done": "Covering while Ayanda is out.", "progress_status": "On Track",
     "percent_complete": 50,
@@ -220,13 +226,13 @@ r = c.post("/weekly-logs/", headers=hdr(boss), json={
 check("a manager can", r.status_code == 201)
 
 # The accountability view.
-r = c.get(f"/weekly-logs/project/{erp.project_id}/", params={"week_start": str(week)}, headers=hdr(boss))
+r = c.get(f"/status-feedback/project/{erp.project_id}/", params={"week_start": str(week)}, headers=hdr(boss))
 check("project week board returns 200", r.status_code == 200)
 pb = r.json()
 check("the board shows the blanks as well as the entries",
       pb["due"] > pb["logged"] and any(a["log"] is None for a in pb["activities"]))
 
-r = c.get("/weekly-logs/compliance/", params={"week_start": str(week)}, headers=hdr(boss))
+r = c.get("/status-feedback/compliance/", params={"week_start": str(week)}, headers=hdr(boss))
 check("compliance returns 200", r.status_code == 200)
 comp = r.json()
 check("compliance covers both projects", len(comp["projects"]) == 2)
@@ -234,15 +240,26 @@ erp_row = next(p for p in comp["projects"] if p["project_number"] == "SE-ERP-202
 check("it names the activities nobody wrote up", len(erp_row["missing"]) == erp_row["due"] - erp_row["logged"])
 check("it counts the weeks marked Not Worked On", erp_row["not_worked_on"] == 1)
 
-r = c.get("/weekly-logs/compliance/", params={"week_start": str(week)}, headers=hdr(ayanda))
+r = c.get("/status-feedback/compliance/", params={"week_start": str(week)}, headers=hdr(ayanda))
 check("a non-manager's compliance view is only their own work",
       all(m["activity_id"] not in due_ids or True for p in r.json()["projects"] for m in p["missing"])
       and r.json()["due"] < comp["due"])
 
-r = c.get(f"/weekly-logs/activity/{seg.activity_id}/", headers=hdr(owner))
+r = c.get(f"/status-feedback/activity/{seg.activity_id}/", headers=hdr(owner))
 check("activity history returns the weeks logged", r.status_code == 200 and len(r.json()) == 1)
 
-r = c.get("/weekly-logs/statuses/", headers=hdr(owner))
+# An activity whose plan names someone with no portal account still shows that
+# name, flagged, rather than looking like nobody's job.
+orphan = db.query(Task).filter(Task.project_id == erp.project_id, Task.plan_seq == 1).first()
+orphan.responsible_user_id = None
+db.add(orphan); db.commit()
+r = c.get(f"/status-feedback/project/{erp.project_id}/", params={"week_start": str(week)}, headers=hdr(boss))
+row = next(a for a in r.json()["activities"] if a["activity_id"] == orphan.activity_id)
+check("an unassigned activity still shows the plan's own name",
+      row["responsible_name"] == "Siphelele Mofokeng (+Sinqobile Shoba - oversight)")
+check("and is flagged as having no portal account", row["has_account"] is False)
+
+r = c.get("/status-feedback/statuses/", headers=hdr(owner))
 check("the status vocabulary is served to the UI",
       r.json()["statuses"] == ["On Track", "Delayed", "Blocked", "Not Worked On", "Completed"])
 

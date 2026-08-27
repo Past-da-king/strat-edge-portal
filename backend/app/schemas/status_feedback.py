@@ -5,7 +5,7 @@ from typing import Optional, List
 from ..models.database import PROGRESS_STATUSES
 
 
-class WeeklyLogBase(BaseModel):
+class StatusFeedbackBase(BaseModel):
     work_done: Optional[str] = None
     blockers: Optional[str] = None
     next_steps: Optional[str] = None
@@ -27,14 +27,14 @@ class WeeklyLogBase(BaseModel):
         return v
 
 
-class WeeklyLogWrite(WeeklyLogBase):
+class StatusFeedbackWrite(StatusFeedbackBase):
     """One submission. week_start is snapped to its Monday on the way in, so a
     client that sends any day of the week still lands on the right log."""
     activity_id: int
     week_start: date
 
 
-class WeeklyLogAuthor(BaseModel):
+class StatusFeedbackAuthor(BaseModel):
     user_id: int
     full_name: Optional[str] = None
     username: Optional[str] = None
@@ -42,7 +42,7 @@ class WeeklyLogAuthor(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class WeeklyLog(WeeklyLogBase):
+class StatusFeedback(StatusFeedbackBase):
     log_id: int
     project_id: int
     activity_id: int
@@ -50,7 +50,7 @@ class WeeklyLog(WeeklyLogBase):
     logged_by: Optional[int] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    author: Optional[WeeklyLogAuthor] = None
+    author: Optional[StatusFeedbackAuthor] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -66,10 +66,11 @@ class ActivityWeek(BaseModel):
     planned_start: Optional[date] = None
     planned_finish: Optional[date] = None
     responsible_user_id: Optional[int] = None
-    responsible_name: Optional[str] = None
+    responsible_name: Optional[str] = None   # portal account, or the plan's own wording
+    has_account: bool = True                 # False when the plan names someone with no login
     expected_output: Optional[str] = None
     kpi: Optional[str] = None
-    log: Optional[WeeklyLog] = None
+    log: Optional[StatusFeedback] = None
 
 
 class WeekBoard(BaseModel):

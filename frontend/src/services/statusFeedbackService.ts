@@ -1,14 +1,14 @@
 import api from './api';
 
 /**
- * Weekly activity log.
+ * Status feedback - the weekly write-up against a live activity.
  *
  * Every week is named by its Monday. The backend snaps whatever date it is
  * given to that Monday, but the UI sends Mondays anyway so what is on screen
  * and what is stored are never a day apart.
  */
 
-export interface WeeklyLogEntry {
+export interface StatusFeedbackEntry {
   log_id: number;
   project_id: number;
   activity_id: number;
@@ -35,9 +35,10 @@ export interface ActivityWeek {
   planned_finish?: string | null;
   responsible_user_id?: number | null;
   responsible_name?: string | null;
+  has_account?: boolean;
   expected_output?: string | null;
   kpi?: string | null;
-  log?: WeeklyLogEntry | null;
+  log?: StatusFeedbackEntry | null;
 }
 
 export interface WeekBoard {
@@ -84,18 +85,18 @@ export const weekLabel = (startIso: string, endIso: string): string => {
   return `${f(startIso, { day: 'numeric' })} – ${f(endIso, { day: 'numeric', month: 'short', year: 'numeric' })}`;
 };
 
-const weeklyLogService = {
+const statusFeedbackService = {
   myWeek: async (weekStart: string): Promise<WeekBoard> =>
-    (await api.get('/weekly-logs/my-week/', { params: { week_start: weekStart } })).data,
+    (await api.get('/status-feedback/my-week/', { params: { week_start: weekStart } })).data,
 
   projectWeek: async (projectId: number, weekStart: string): Promise<WeekBoard> =>
-    (await api.get(`/weekly-logs/project/${projectId}/`, { params: { week_start: weekStart } })).data,
+    (await api.get(`/status-feedback/project/${projectId}/`, { params: { week_start: weekStart } })).data,
 
-  history: async (activityId: number): Promise<WeeklyLogEntry[]> =>
-    (await api.get(`/weekly-logs/activity/${activityId}/`)).data,
+  history: async (activityId: number): Promise<StatusFeedbackEntry[]> =>
+    (await api.get(`/status-feedback/activity/${activityId}/`)).data,
 
   compliance: async (weekStart: string) =>
-    (await api.get('/weekly-logs/compliance/', { params: { week_start: weekStart } })).data as {
+    (await api.get('/status-feedback/compliance/', { params: { week_start: weekStart } })).data as {
       week_start: string; week_end: string; due: number; logged: number; blocked: number;
       projects: ComplianceRow[];
     },
@@ -108,7 +109,7 @@ const weeklyLogService = {
     next_steps: string;
     progress_status: string;
     percent_complete: number;
-  }): Promise<WeeklyLogEntry> => (await api.post('/weekly-logs/', payload)).data,
+  }): Promise<StatusFeedbackEntry> => (await api.post('/status-feedback/', payload)).data,
 };
 
-export default weeklyLogService;
+export default statusFeedbackService;

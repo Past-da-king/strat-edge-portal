@@ -1,4 +1,4 @@
-"""Weekly activity log.
+"""Status feedback - the weekly write-up against a live activity.
 
 The baseline schedule records what was PLANNED. This records what actually
 happened, week by week, in the words of the person doing the work - while the
@@ -16,9 +16,9 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
-from ..models.database import get_db, Project, Task, User, WeeklyLog, PROGRESS_STATUSES
-from ..schemas.weekly_log import (
-    ActivityWeek, WeekBoard, WeeklyLog as WeeklyLogSchema, WeeklyLogWrite,
+from ..models.database import get_db, Project, Task, User, StatusFeedback, PROGRESS_STATUSES
+from ..schemas.status_feedback import (
+    ActivityWeek, WeekBoard, StatusFeedback as StatusFeedbackSchema, StatusFeedbackWrite,
 )
 from .deps import get_current_user
 
@@ -67,9 +67,9 @@ def _board(db: Session, tasks: List[Task], week_start: date) -> WeekBoard:
     logs = {}
     if ids:
         rows = (
-            db.query(WeeklyLog)
-            .options(joinedload(WeeklyLog.author))
-            .filter(WeeklyLog.activity_id.in_(ids), WeeklyLog.week_start == week_start)
+            db.query(StatusFeedback)
+            .options(joinedload(StatusFeedback.author))
+            .filter(StatusFeedback.activity_id.in_(ids), StatusFeedback.week_start == week_start)
             .all()
         )
         logs = {r.activity_id: r for r in rows}
@@ -87,10 +87,14 @@ def _board(db: Session, tasks: List[Task], week_start: date) -> WeekBoard:
                 planned_start=t.planned_start,
                 planned_finish=t.planned_finish,
                 responsible_user_id=t.responsible_user_id,
-                responsible_name=t.responsible.full_name if t.responsible else None,
+                # An imported plan can name someone who has no portal account yet.
+                # Show the plan's own wording rather than a blank, and flag it so
+                # the page can say the activity is nobody's to answer for.
+                responsible_name=(t.responsible.full_name if t.responsible else t.responsible_names),
+                has_account=t.responsible_user_id is not None,
                 expected_output=t.expected_output,
                 kpi=t.kpi,
-                log=WeeklyLogSchema.model_validate(logs[t.activity_id]) if t.activity_id in logs else None,
+                log=StatusFeedbackSchema.model_validate(logs[t.activity_id]) if t.activity_id in logs else None,
             )
         )
     items.sort(key=lambda a: (a.log is not None, a.project_name, a.planned_finish or date.max))
@@ -146,7 +150,7 @@ def project_week(
     return _board(db, _live_in_week(q, ws, we).all(), ws)
 
 
-@router.get("/activity/{activity_id}/", response_model=List[WeeklyLogSchema])
+@router.get("/activity/{activity_id}/", response_model=List[StatusFeedbackSchema])
 def activity_history(
     activity_id: int,
     db: Session = Depends(get_db),
@@ -157,17 +161,17 @@ def activity_history(
     if not task:
         raise HTTPException(status_code=404, detail="Activity not found")
     return (
-        db.query(WeeklyLog)
-        .options(joinedload(WeeklyLog.author))
-        .filter(WeeklyLog.activity_id == activity_id)
-        .order_by(WeeklyLog.week_start)
+        db.query(StatusFeedback)
+        .options(joinedload(StatusFeedback.author))
+        .filter(StatusFeedback.activity_id == activity_id)
+        .order_by(StatusFeedback.week_start)
         .all()
     )
 
 
-@router.post("/", response_model=WeeklyLogSchema, status_code=status.HTTP_201_CREATED)
-def submit_weekly_log(
-    payload: WeeklyLogWrite,
+@router.post("/", response_model=StatusFeedbackSchema, status_code=status.HTTP_201_CREATED)
+def submit_status_feedback(
+    payload: StatusFeedbackWrite,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -185,7 +189,7 @@ def submit_weekly_log(
     if not is_owner and current_user.role not in MANAGERS:
         raise HTTPException(
             status_code=403,
-            detail="Only the person responsible for this activity (or a manager) can log against it",
+            detail="Only the person responsible for this activity (or a manager) can give status on it",
         )
 
     if not (payload.work_done or "").strip() and payload.progress_status != "Not Worked On":
@@ -196,13 +200,13 @@ def submit_weekly_log(
 
     week = monday_of(payload.week_start)
     log = (
-        db.query(WeeklyLog)
-        .filter(WeeklyLog.activity_id == payload.activity_id, WeeklyLog.week_start == week)
+        db.query(StatusFeedback)
+        .filter(StatusFeedback.activity_id == payload.activity_id, StatusFeedback.week_start == week)
         .first()
     )
     created = log is None
     if created:
-        log = WeeklyLog(activity_id=payload.activity_id, project_id=task.project_id, week_start=week)
+        log = StatusFeedback(activity_id=payload.activity_id, project_id=task.project_id, week_start=week)
 
     log.work_done = payload.work_done
     log.blockers = payload.blockers
@@ -226,7 +230,7 @@ def submit_weekly_log(
     log_event(
         db,
         event_type="CREATE" if created else "UPDATE",
-        category="WEEKLY_LOG",
+        category="STATUS_FEEDBACK",
         description=f"Week of {week}: {task.activity_name} - {payload.progress_status}",
         user_id=current_user.user_id,
         metadata={
@@ -269,8 +273,8 @@ def compliance(
     if ids:
         logs = {
             r.activity_id: r
-            for r in db.query(WeeklyLog)
-            .filter(WeeklyLog.activity_id.in_(ids), WeeklyLog.week_start == ws)
+            for r in db.query(StatusFeedback)
+            .filter(StatusFeedback.activity_id.in_(ids), StatusFeedback.week_start == ws)
             .all()
         }
 

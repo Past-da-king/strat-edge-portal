@@ -6,10 +6,10 @@ import {
 import api from '../services/api';
 import { CustomSelect } from '../components/CustomSelect';
 import { Modal } from '../components/Modal';
-import weeklyLogService, {
-  ActivityWeek, ComplianceRow, PROGRESS_STATUSES, WeekBoard, WeeklyLogEntry,
+import statusFeedbackService, {
+  ActivityWeek, ComplianceRow, PROGRESS_STATUSES, WeekBoard, StatusFeedbackEntry,
   mondayOf, shiftWeeks, weekLabel,
-} from '../services/weeklyLogService';
+} from '../services/statusFeedbackService';
 
 const MANAGER_ROLES = ['admin', 'pm', 'executive'];
 
@@ -35,7 +35,7 @@ const fmtDay = (iso?: string | null) => {
   return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
 };
 
-/** One activity's write-up for the week. Collapsed until it is being filled in. */
+/** One activity's status for the week. Collapsed until it is being filled in. */
 const LogCard: React.FC<{
   item: ActivityWeek;
   weekStart: string;
@@ -70,7 +70,7 @@ const LogCard: React.FC<{
     setSaving(true);
     setError('');
     try {
-      await weeklyLogService.submit({ activity_id: item.activity_id, week_start: weekStart, ...form });
+      await statusFeedbackService.submit({ activity_id: item.activity_id, week_start: weekStart, ...form });
       setOpen(false);
       onSaved();
     } catch (e: any) {
@@ -100,8 +100,16 @@ const LogCard: React.FC<{
               {fmtDay(item.planned_start)} → {fmtDay(item.planned_finish)}
             </span>
             {item.responsible_name && (
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-1">
+              <span
+                className={`text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-1 ${
+                  item.has_account === false ? 'text-rose-400' : 'text-slate-400'
+                }`}
+                title={item.has_account === false
+                  ? 'Named on the project plan but has no portal account yet - a manager has to answer for this one'
+                  : undefined}
+              >
                 <Users className="w-3 h-3" /> {item.responsible_name}
+                {item.has_account === false && ' · no account yet'}
               </span>
             )}
           </div>
@@ -114,7 +122,7 @@ const LogCard: React.FC<{
             </p>
           ) : (
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 mt-2">
-              No write-up for this week yet
+              No status given for this week yet
             </p>
           )}
         </div>
@@ -145,7 +153,7 @@ const LogCard: React.FC<{
                 : 'bg-accent-primary text-white hover:opacity-90'
             }`}
           >
-            {open ? 'Close' : existing ? 'Edit' : 'Log Week'}
+            {open ? 'Close' : existing ? 'Edit' : 'Give Status'}
           </button>
         </div>
       </div>
@@ -216,7 +224,7 @@ const LogCard: React.FC<{
               className="bg-accent-primary text-white px-8 py-4 rounded-[1.25rem] font-black uppercase tracking-widest text-[10px] flex items-center gap-3 hover:opacity-90 disabled:opacity-40 transition-all"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Save Week
+              Save Status
             </button>
           </div>
         </div>
@@ -249,7 +257,7 @@ const Stat: React.FC<{ label: string; value: React.ReactNode; color?: string }> 
   </div>
 );
 
-export const WeeklyLog: React.FC = () => {
+export const StatusFeedback: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isManager = MANAGER_ROLES.includes(user.role);
 
@@ -259,7 +267,7 @@ export const WeeklyLog: React.FC = () => {
   const [board, setBoard] = useState<WeekBoard | null>(null);
   const [compliance, setCompliance] = useState<{ due: number; logged: number; blocked: number; projects: ComplianceRow[] } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [history, setHistory] = useState<{ item: ActivityWeek; entries: WeeklyLogEntry[] } | null>(null);
+  const [history, setHistory] = useState<{ item: ActivityWeek; entries: StatusFeedbackEntry[] } | null>(null);
 
   const thisWeek = mondayOf(new Date());
 
@@ -272,9 +280,9 @@ export const WeeklyLog: React.FC = () => {
     try {
       const [b, c] = await Promise.all([
         scope === 'mine'
-          ? weeklyLogService.myWeek(weekStart)
-          : weeklyLogService.projectWeek(scope as number, weekStart),
-        weeklyLogService.compliance(weekStart).catch(() => null),
+          ? statusFeedbackService.myWeek(weekStart)
+          : statusFeedbackService.projectWeek(scope as number, weekStart),
+        statusFeedbackService.compliance(weekStart).catch(() => null),
       ]);
       setBoard(b);
       setCompliance(c as any);
@@ -289,7 +297,7 @@ export const WeeklyLog: React.FC = () => {
   useEffect(() => { load(); }, [weekStart, scope]);
 
   const openHistory = async (item: ActivityWeek) => {
-    const entries = await weeklyLogService.history(item.activity_id);
+    const entries = await statusFeedbackService.history(item.activity_id);
     setHistory({ item, entries });
   };
 
@@ -299,7 +307,7 @@ export const WeeklyLog: React.FC = () => {
   );
 
   const scopeOptions = [
-    { value: 'mine', label: 'My activities' },
+    { value: 'mine', label: 'My active activities' },
     ...projects.map((p: any) => ({ value: String(p.project_id), label: p.project_name })),
   ];
 
@@ -311,10 +319,10 @@ export const WeeklyLog: React.FC = () => {
             <div className="w-12 h-12 bg-accent-primary/10 rounded-2xl flex items-center justify-center border border-accent-primary/20">
               <CalendarRange className="w-7 h-7 text-accent-primary" />
             </div>
-            WEEKLY LOG
+            STATUS FEEDBACK
           </h1>
           <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] ml-16">
-            What actually happened, activity by activity, while it is happening
+            Every week, on every activity you are assigned: what happened, what is in the way
           </p>
         </div>
 
@@ -360,7 +368,7 @@ export const WeeklyLog: React.FC = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <Stat label="Due this week" value={board?.due ?? '—'} />
-        <Stat label="Written up" value={board?.logged ?? '—'} color="text-emerald-500" />
+        <Stat label="Status given" value={board?.logged ?? '—'} color="text-emerald-500" />
         <Stat label="Outstanding" value={outstanding.length} color={outstanding.length ? 'text-amber-500' : undefined} />
         <Stat
           label={isManager ? 'Blocked (portfolio)' : 'Blocked'}
@@ -377,10 +385,10 @@ export const WeeklyLog: React.FC = () => {
         <div className="glass rounded-[2rem] p-16 border border-slate-200 dark:border-white/5 text-center">
           <CheckCircle2 className="w-12 h-12 text-emerald-500/40 mx-auto mb-5" />
           <p className="font-black uppercase tracking-widest text-sm text-slate-500">
-            Nothing running this week
+            No active activities this week
           </p>
           <p className="text-xs text-slate-400 mt-2">
-            No activity on {scope === 'mine' ? 'your plate' : 'this project'} is scheduled across these dates.
+            Nothing {scope === 'mine' ? 'assigned to you' : 'on this project'} is scheduled across these dates.
           </p>
         </div>
       ) : (
@@ -494,4 +502,4 @@ export const WeeklyLog: React.FC = () => {
   );
 };
 
-export default WeeklyLog;
+export default StatusFeedback;

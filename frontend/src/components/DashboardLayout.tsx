@@ -93,7 +93,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     { icon: LayoutDashboard, label: "Overview", to: "/", mobile: true },
     { icon: FolderOpen, label: "Projects", to: "/projects", mobile: true },
     { icon: Bolt, label: "Activity", to: "/activity", mobile: true },
-    { icon: CalendarRange, label: "Weekly Log", to: "/weekly-log", mobile: true },
+    { icon: CalendarRange, label: "Status Feedback", to: "/status-feedback", mobile: true },
     { icon: Coins, label: "Spend", to: "/expenditure" },
     { icon: Plus, label: "Setup", to: "/setup", roles: ['admin', 'pm', 'executive'] },
     { icon: AlertTriangle, label: "Risks", to: "/risks" },
