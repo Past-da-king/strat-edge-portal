@@ -67,9 +67,16 @@ export const ssoStart = async () => {
 export const ssoConfig = async () => {
   try {
     const response = await api.get(`auth/sso/config/`);
-    return response.data as { enabled: boolean; id_base_url: string };
+    return response.data as {
+      enabled: boolean;
+      id_base_url: string;
+      local_sign_in_allowed?: boolean;
+      policy_source?: string;
+    };
   } catch {
-    return { enabled: false, id_base_url: "" };
+    // Our own API is unreachable. Show every door rather than none — the
+    // backend refuses a local sign-in it is not allowed to accept anyway.
+    return { enabled: false, id_base_url: "", local_sign_in_allowed: true };
   }
 };
 

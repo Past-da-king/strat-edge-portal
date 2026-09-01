@@ -34,6 +34,18 @@ def login_access_token(
     back a short-lived challenge token. Two-factor is compulsory for everyone, so
     a user who has never enrolled is sent into enrolment instead of being let in.
     """
+    # Hiding the form in the browser is not a policy, it is a suggestion. If
+    # Strat Edge ID says this application is ID-only, the local route has to
+    # refuse — and it still yields to the break-glass flag, because that flag
+    # exists precisely for when ID cannot be reached.
+    from ..core import sso_policy
+
+    if not sso_policy.local_sign_in_allowed():
+        raise HTTPException(
+            status_code=403,
+            detail="This portal signs in through Strat Edge ID. Use the Strat Edge ID button.",
+        )
+
     user = security.authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect username or password")

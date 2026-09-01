@@ -47,8 +47,22 @@ def _challenge(verifier: str) -> str:
 
 @router.get("/config/")
 def sso_config() -> Any:
-    """Whether single sign-on is switched on, and where to send people."""
-    return {"enabled": bool(CLIENT_SECRET), "id_base_url": ID_BASE_URL}
+    """
+    Whether single sign-on is switched on, where to send people, and whether
+    this portal is still allowed to show its own password form.
+
+    That last one is Strat Edge ID's decision, resolved through the fallback
+    chain in core/sso_policy.py so an ID outage can never hide the only way in.
+    """
+    from ..core import sso_policy
+
+    resolved = sso_policy.policy()
+    return {
+        "enabled": bool(CLIENT_SECRET),
+        "id_base_url": ID_BASE_URL,
+        "local_sign_in_allowed": resolved["local_sign_in_allowed"],
+        "policy_source": resolved["source"],
+    }
 
 
 @router.get("/start/")

@@ -20,10 +20,16 @@ export const Login: React.FC = () => {
   const [secretCopied, setSecretCopied] = useState(false);
 
   const [ssoEnabled, setSsoEnabled] = useState(false);
+  const [localAllowed, setLocalAllowed] = useState(true);
   const [showLocal, setShowLocal] = useState(false);
 
   useEffect(() => {
-    authService.ssoConfig().then((c) => setSsoEnabled(Boolean(c.enabled)));
+    authService.ssoConfig().then((c) => {
+      setSsoEnabled(Boolean(c.enabled));
+      // Undefined means an older API that predates the policy — treat that as
+      // allowed, the same direction the backend fails in.
+      setLocalAllowed(c.local_sign_in_allowed !== false);
+    });
   }, []);
 
   // Hand the browser to Strat Edge ID. The verifier stays here until the code
@@ -193,7 +199,7 @@ export const Login: React.FC = () => {
                   <p className="mt-3 text-center text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
                     One account for every Strat Edge application
                   </p>
-                  {!showLocal && (
+                  {!showLocal && localAllowed && (
                     <button
                       onClick={() => setShowLocal(true)}
                       className="w-full mt-6 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-accent-primary transition-colors"
@@ -201,10 +207,15 @@ export const Login: React.FC = () => {
                       Use a portal password instead
                     </button>
                   )}
+                  {!localAllowed && (
+                    <p className="mt-6 text-center text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
+                      Accounts here are created in Strat Edge ID
+                    </p>
+                  )}
                 </div>
               )}
 
-              <form onSubmit={handleLogin} className={`space-y-6 ${ssoEnabled && !showLocal ? 'hidden' : ''}`}>
+              <form onSubmit={handleLogin} className={`space-y-6 ${(ssoEnabled && !showLocal) || !localAllowed ? 'hidden' : ''}`}>
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 px-1">Access Identity</label>
                   <input

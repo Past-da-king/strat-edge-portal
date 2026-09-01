@@ -65,3 +65,6 @@ docs/
 
 # Local virtualenv
 .venv/
+
+# Local test virtualenv (see backend/tests/test_sso_policy_fallback.py)
+backend/.venv-test/
