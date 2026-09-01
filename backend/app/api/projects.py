@@ -10,6 +10,21 @@ from datetime import datetime
 
 router = APIRouter()
 
+
+def guard_project_access(db: Session, current_user: User, project_id: int) -> None:
+    """
+    A project someone is not on must be invisible, not merely unlisted.
+
+    Filtering the portfolio list alone is decoration: the project id is in the
+    URL, so anyone could read /projects/5/ or its budget by typing it. This is
+    the same membership rule the list uses, applied to one project — and it
+    raises 404 rather than 403 on purpose, because "you may not see this" still
+    tells you the project exists.
+    """
+    if not ProjectService.can_see_project(db, current_user, project_id):
+        raise HTTPException(status_code=404, detail="Project not found")
+
+
 @router.post("/import/", response_model=ProjectSchema)
 async def import_project(
     file: UploadFile = File(...), 
@@ -25,8 +40,18 @@ def list_projects(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Archived projects are left out unless they are explicitly asked for."""
-    return ProjectService.get_portfolio_metrics(db, include_archived=include_archived)
+    """
+    The portfolio, as this person is allowed to see it.
+
+    Administrators and executives get everything — oversight is their job.
+    A project manager or a team member gets the projects they lead, are assigned
+    to, or own an activity on, and nothing else.
+    """
+    return ProjectService.get_portfolio_metrics(
+        db,
+        viewer_id=ProjectService.viewer_id_for(current_user),
+        include_archived=include_archived,
+    )
 
 
 @router.post("/{project_id}/archive/", response_model=ProjectSchema)
@@ -96,6 +121,7 @@ def read_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    guard_project_access(db, current_user, project_id)
     project = db.query(Project).filter(Project.project_id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -107,6 +133,7 @@ def get_metrics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    guard_project_access(db, current_user, project_id)
     metrics = ProjectService.get_project_metrics(db, project_id)
     if not metrics:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -118,6 +145,7 @@ def get_spending_breakdown(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    guard_project_access(db, current_user, project_id)
     return ProjectService.get_category_spending(db, project_id)
 
 @router.get("/{project_id}/burndown/")
@@ -126,6 +154,7 @@ def get_burndown(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    guard_project_access(db, current_user, project_id)
     return ProjectService.get_burndown_data(db, project_id)
 
 @router.get("/{project_id}/task-burndown/")
@@ -134,6 +163,7 @@ def get_task_burndown(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    guard_project_access(db, current_user, project_id)
     return ProjectService.get_task_burndown_data(db, project_id)
 
 @router.get("/{project_id}/summary/")
@@ -142,6 +172,7 @@ def get_project_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    guard_project_access(db, current_user, project_id)
     return {"summary": ProjectService.get_executive_summary(db, project_id)}
 
 @router.get("/{project_id}/network-diagram/")
@@ -150,6 +181,7 @@ def get_network_diagram(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    guard_project_access(db, current_user, project_id)
     return ProjectService.get_network_diagram_data(db, project_id)
 
 @router.post("/", response_model=ProjectSchema, status_code=status.HTTP_201_CREATED)

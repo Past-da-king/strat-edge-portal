@@ -14,22 +14,63 @@ class ProjectService:
         query = db.query(models.Project)
         return query.all()
 
+    # Who counts as being ON a project. One definition, used by the portfolio
+    # query and by the single-project guard, so the list and the detail pages can
+    # never disagree about what someone is allowed to see.
+    _MEMBERSHIP_SQL = """
+        p.pm_user_id = :viewer_id
+        OR EXISTS (SELECT 1 FROM project_assignments pa
+                    WHERE pa.project_id = p.project_id AND pa.user_id = :viewer_id)
+        OR EXISTS (SELECT 1 FROM baseline_schedule bs
+                    WHERE bs.project_id = p.project_id AND bs.responsible_user_id = :viewer_id)
+    """
+
+    # Roles that see the whole portfolio regardless of assignment.
+    OVERSIGHT_ROLES = ("admin", "executive")
+
     @staticmethod
-    def get_portfolio_metrics(db: Session, pm_id: Optional[int] = None, user_id: Optional[int] = None, include_archived: bool = False) -> List[Dict[str, Any]]:
+    def viewer_id_for(user) -> Optional[int]:
         """
-        Fetches all projects and their associated metrics in a single, optimized query.
-        Ported from the legacy calculations.py for high performance.
+        None means "show everything". A director or an administrator needs the
+        portfolio; everyone else sees the projects they are actually on.
         """
-        # SQLite compatible version of the legacy query
-        query_str = """
+        if getattr(user, "role", None) in ProjectService.OVERSIGHT_ROLES:
+            return None
+        return user.user_id
+
+    @staticmethod
+    def can_see_project(db: Session, user, project_id: int) -> bool:
+        """The same rule as the list, asked about one project."""
+        viewer_id = ProjectService.viewer_id_for(user)
+        if viewer_id is None:
+            return True
+        row = db.execute(
+            text(f"SELECT 1 FROM projects p WHERE p.project_id = :project_id AND ({ProjectService._MEMBERSHIP_SQL}) LIMIT 1"),
+            {"project_id": project_id, "viewer_id": viewer_id},
+        ).first()
+        return row is not None
+
+    @staticmethod
+    def get_portfolio_metrics(db: Session, viewer_id: Optional[int] = None, include_archived: bool = False) -> List[Dict[str, Any]]:
+        """
+        Every project this person may see, with its metrics, in one query.
+
+        `viewer_id` of None means no restriction — that is how an administrator or
+        an executive gets the whole portfolio. Anyone else passes their own id and
+        gets back only the projects they lead, are assigned to, or own an activity
+        on.
+
+        ⚠ The previous version of this WHERE clause could never filter anything.
+        It read `(:pm_id IS NULL OR ...) OR (:user_id IS NULL OR ...)`, so whenever
+        either parameter was NULL that whole branch was true and every project came
+        back. Wired up as it stood, it would have quietly shown everyone
+        everything — which is exactly what it did.
+        """
+        query_str = f"""
             WITH project_list AS (
-                SELECT p.* 
+                SELECT p.*
                 FROM projects p
-                WHERE (
-                       (:pm_id IS NULL OR p.pm_user_id = :pm_id)
-                    OR (:user_id IS NULL OR EXISTS (SELECT 1 FROM project_assignments pa WHERE pa.project_id = p.project_id AND pa.user_id = :user_id))
-                    OR (:user_id IS NULL OR EXISTS (SELECT 1 FROM baseline_schedule bs WHERE bs.project_id = p.project_id AND bs.responsible_user_id = :user_id))
-                )
+                WHERE (:viewer_id IS NULL OR ({ProjectService._MEMBERSHIP_SQL}))
                 AND (:include_archived = 1 OR p.archived_at IS NULL)
             )
             SELECT 
@@ -45,8 +86,7 @@ class ProjectService:
         """
         
         result = db.execute(text(query_str), {
-            "pm_id": pm_id,
-            "user_id": user_id,
+            "viewer_id": viewer_id,
             "include_archived": 1 if include_archived else 0,
         })
         projects = []
@@ -95,7 +135,9 @@ class ProjectService:
     @staticmethod
     def get_project_metrics(db: Session, project_id: int):
         # We can just use the portfolio method for a single project for now to stay DRY
-        metrics = ProjectService.get_portfolio_metrics(db, pm_id=None, user_id=None)
+        # No viewer filter here on purpose: the ROUTE has already checked that
+        # this person may see this project.
+        metrics = ProjectService.get_portfolio_metrics(db, viewer_id=None)
         return next((m for m in metrics if m["project_id"] == project_id), None)
 
     @staticmethod

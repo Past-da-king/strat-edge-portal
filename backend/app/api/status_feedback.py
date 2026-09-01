@@ -136,6 +136,9 @@ def project_week(
 
     This is the accountability view: the blanks are the point of it.
     """
+    from .projects import guard_project_access
+    guard_project_access(db, current_user, project_id)
+
     project = db.query(Project).filter(Project.project_id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")

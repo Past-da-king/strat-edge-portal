@@ -27,6 +27,11 @@ def get_task_inventory(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Same boundary as the project itself — otherwise the activities of a
+    # project you cannot see are one URL away.
+    from .projects import guard_project_access
+    guard_project_access(db, current_user, project_id)
+
     tasks = db.query(Task).filter(Task.project_id == project_id).all()
     return tasks
 
