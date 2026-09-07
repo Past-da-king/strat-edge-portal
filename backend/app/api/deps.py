@@ -9,6 +9,7 @@ from ..core import security
 from ..core.config import settings
 from ..models import database as models
 from ..schemas.token import TokenPayload
+from ..core import telemetry
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"/auth/login"
@@ -69,6 +70,14 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="MFA_ENROLMENT_REQUIRED")
 
     print(f"DEBUG: User authenticated: {user.username} (Role: {user.role})")
+
+    # Report presence to Strat Edge ID. Here rather than in a middleware because
+    # this is the one place that knows WHO the request is from, and it is the
+    # single gate every authenticated request already passes through. The call
+    # is throttled per person and runs on a daemon thread, so it costs this
+    # request nothing and cannot fail it.
+    telemetry.touch(user.email, None)
+
     return user
 
 
