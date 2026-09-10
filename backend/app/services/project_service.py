@@ -51,6 +51,21 @@ class ProjectService:
         return row is not None
 
     @staticmethod
+    def visible_project_ids(db: Session, user, include_archived: bool = False) -> List[int]:
+        """The ids of every project this person may see - the list's rule, for
+        routes that hang off projects (risks) rather than list them."""
+        viewer_id = ProjectService.viewer_id_for(user)
+        rows = db.execute(
+            text(f"""
+                SELECT p.project_id FROM projects p
+                WHERE (:viewer_id IS NULL OR ({ProjectService._MEMBERSHIP_SQL}))
+                AND (:include_archived = 1 OR p.archived_at IS NULL)
+            """),
+            {"viewer_id": viewer_id, "include_archived": 1 if include_archived else 0},
+        )
+        return [r[0] for r in rows]
+
+    @staticmethod
     def get_portfolio_metrics(db: Session, viewer_id: Optional[int] = None, include_archived: bool = False) -> List[Dict[str, Any]]:
         """
         Every project this person may see, with its metrics, in one query.

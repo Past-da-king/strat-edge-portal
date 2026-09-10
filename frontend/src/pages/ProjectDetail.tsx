@@ -90,7 +90,8 @@ export const ProjectDetail: React.FC = () => {
         projectService.getTaskBurndownData(projectId),
         api.get(`projects/${projectId}/spending-breakdown/`),
         api.get(`tasks/project/${projectId}/`),
-        api.get(`risks/`),
+        // This project's own risks - kept even once the project is archived.
+        api.get('risks/', { params: { project_id: projectId, include_archived: true } }),
         api.get(`repository/project/${projectId}/`),
         projectService.getProjects()
       ]);
