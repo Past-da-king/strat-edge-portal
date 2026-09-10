@@ -15,6 +15,7 @@ import { Monitoring } from './pages/Monitoring'
 import { Overview } from './pages/Overview'
 import { UserSettings } from './pages/UserSettings'
 import { StatusFeedback } from './pages/StatusFeedback'
+import { StatusFeedbackReport } from './pages/StatusFeedbackReport'
 
 const PrivateRoute = ({ children, roles }: { children: React.ReactNode, roles?: string[] }) => {
   const userStr = localStorage.getItem('user');
@@ -79,6 +80,14 @@ function App() {
           <PrivateRoute>
             <DashboardLayout>
               <StatusFeedback />
+            </DashboardLayout>
+          </PrivateRoute>
+        } />
+
+        <Route path="/status-feedback/report" element={
+          <PrivateRoute roles={['admin', 'executive']}>
+            <DashboardLayout>
+              <StatusFeedbackReport />
             </DashboardLayout>
           </PrivateRoute>
         } />

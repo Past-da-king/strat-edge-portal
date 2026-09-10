@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, field_validator
 from datetime import date, datetime
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 from ..models.database import PROGRESS_STATUSES
 
@@ -79,3 +79,124 @@ class WeekBoard(BaseModel):
     due: int          # activities live this week
     logged: int       # of those, how many have been written up
     activities: List[ActivityWeek] = []
+
+
+# ---------------------------------------------------------------- oversight report
+
+class ReportEntry(BaseModel):
+    """One log, flattened with the names an executive reads it by."""
+    log_id: int
+    week_start: date
+    week_end: date
+    project_id: int
+    project_name: str
+    project_number: Optional[str] = None
+    project_archived: bool = False
+    activity_id: int
+    activity_name: str
+    activity_status: Optional[str] = None
+    responsible_user_id: Optional[int] = None
+    responsible_name: Optional[str] = None
+    logged_by: Optional[int] = None
+    author_name: str
+    author_role: Optional[str] = None
+    progress_status: str
+    percent_complete: int = 0
+    work_done: Optional[str] = None
+    blockers: Optional[str] = None
+    next_steps: Optional[str] = None
+    updated_at: Optional[datetime] = None
+    days_ago: Optional[int] = None
+
+
+class ReportPerson(BaseModel):
+    user_id: Optional[int] = None
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+    entries: int
+    blocked: int
+    projects: int
+    last_update_at: Optional[datetime] = None
+    last_week_start: Optional[date] = None
+    days_ago: Optional[int] = None
+
+
+class ReportProject(BaseModel):
+    project_id: int
+    project_name: str
+    project_number: Optional[str] = None
+    archived: bool = False
+    entries: int
+    blocked: int
+    people: int
+    last_update_at: Optional[datetime] = None
+    days_ago: Optional[int] = None
+
+
+class ReportQuiet(BaseModel):
+    user_id: int
+    full_name: str
+    role: Optional[str] = None
+    open_activities: int
+    last_update_at: Optional[datetime] = None
+    days_quiet: Optional[int] = None      # None = has never logged
+
+
+class ReportLatest(BaseModel):
+    log_id: int
+    updated_at: Optional[datetime] = None
+    days_ago: Optional[int] = None
+    author_name: str
+    project_name: str
+    activity_name: str
+    progress_status: str
+
+
+class ReportSummary(BaseModel):
+    total: int
+    people_reporting: int
+    projects_reporting: int
+    blocked: int
+    delayed: int
+    not_worked_on: int
+    by_status: Dict[str, int]
+    latest: Optional[ReportLatest] = None
+    people: List[ReportPerson] = []
+    projects: List[ReportProject] = []
+    quiet: List[ReportQuiet] = []
+
+
+class ReportFilterEcho(BaseModel):
+    project_id: Optional[int] = None
+    person_id: Optional[int] = None
+    progress_status: Optional[str] = None
+    date_from: Optional[date] = None
+    date_to: Optional[date] = None
+
+
+class ReportOptionProject(BaseModel):
+    project_id: int
+    project_name: str
+    project_number: Optional[str] = None
+    archived: bool = False
+
+
+class ReportOptionPerson(BaseModel):
+    user_id: int
+    full_name: str
+    role: Optional[str] = None
+
+
+class ReportOptions(BaseModel):
+    projects: List[ReportOptionProject] = []
+    people: List[ReportOptionPerson] = []
+    statuses: List[str] = []
+
+
+class StatusFeedbackReport(BaseModel):
+    generated_at: datetime
+    filters: ReportFilterEcho
+    quiet_after_days: int
+    summary: ReportSummary
+    entries: List[ReportEntry] = []
+    options: ReportOptions

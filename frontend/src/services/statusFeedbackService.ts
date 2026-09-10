@@ -62,6 +62,88 @@ export interface ComplianceRow {
 
 export const PROGRESS_STATUSES = ['On Track', 'Delayed', 'Blocked', 'Not Worked On', 'Completed'];
 
+/** The executive + admin report over every log. Empty strings mean "all". */
+export interface ReportFilters {
+  project_id: string;
+  person_id: string;
+  progress_status: string;
+  date_from: string;
+  date_to: string;
+}
+
+export const NO_REPORT_FILTERS: ReportFilters = {
+  project_id: '', person_id: '', progress_status: '', date_from: '', date_to: '',
+};
+
+export interface ReportEntry {
+  log_id: number;
+  week_start: string;
+  week_end: string;
+  project_id: number;
+  project_name: string;
+  project_number?: string | null;
+  project_archived: boolean;
+  activity_id: number;
+  activity_name: string;
+  activity_status?: string | null;
+  responsible_user_id?: number | null;
+  responsible_name?: string | null;
+  logged_by?: number | null;
+  author_name: string;
+  author_role?: string | null;
+  progress_status: string;
+  percent_complete: number;
+  work_done?: string | null;
+  blockers?: string | null;
+  next_steps?: string | null;
+  updated_at?: string | null;
+  days_ago?: number | null;
+}
+
+export interface StatusFeedbackReport {
+  generated_at: string;
+  quiet_after_days: number;
+  filters: Record<keyof ReportFilters, string | number | null>;
+  summary: {
+    total: number;
+    people_reporting: number;
+    projects_reporting: number;
+    blocked: number;
+    delayed: number;
+    not_worked_on: number;
+    by_status: Record<string, number>;
+    latest: {
+      log_id: number; days_ago?: number | null; author_name: string;
+      project_name: string; activity_name: string; progress_status: string;
+    } | null;
+    people: {
+      user_id?: number | null; full_name?: string | null; role?: string | null;
+      entries: number; blocked: number; projects: number; days_ago?: number | null;
+    }[];
+    projects: {
+      project_id: number; project_name: string; project_number?: string | null; archived: boolean;
+      entries: number; blocked: number; people: number; days_ago?: number | null;
+    }[];
+    quiet: {
+      user_id: number; full_name: string; role?: string | null;
+      open_activities: number; days_quiet?: number | null;
+    }[];
+  };
+  entries: ReportEntry[];
+  options: {
+    projects: { project_id: number; project_name: string; project_number?: string | null; archived: boolean }[];
+    people: { user_id: number; full_name: string; role?: string | null }[];
+    statuses: string[];
+  };
+}
+
+const reportParams = (f: ReportFilters) =>
+  Object.fromEntries(Object.entries(f).filter(([, v]) => v !== ''));
+
+/** "today", "yesterday", "5 days ago" - counted by the server, so no timezone drift. */
+export const daysAgoLabel = (days?: number | null): string =>
+  days == null ? 'never' : days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+
 /** The Monday of the week a date falls in, as YYYY-MM-DD. */
 export const mondayOf = (d: Date): string => {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -110,6 +192,26 @@ const statusFeedbackService = {
     progress_status: string;
     percent_complete: number;
   }): Promise<StatusFeedbackEntry> => (await api.post('/status-feedback/', payload)).data,
+
+  report: async (filters: ReportFilters): Promise<StatusFeedbackReport> =>
+    (await api.get('/status-feedback/report/', { params: reportParams(filters) })).data,
+
+  /** The token rides in a header, so a plain <a href> cannot fetch it - pull the blob and save it. */
+  downloadReport: async (format: 'csv' | 'pdf', filters: ReportFilters): Promise<void> => {
+    const res = await api.get('/status-feedback/report/export/', {
+      params: { ...reportParams(filters), format },
+      responseType: 'blob',
+    });
+    const match = /filename="?([^";]+)"?/.exec(res.headers['content-disposition'] || '');
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', match?.[1] || `status-feedback-report.${format}`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
 
 export default statusFeedbackService;

@@ -6,6 +6,7 @@ import {
 import api from '../services/api';
 import { CustomSelect } from '../components/CustomSelect';
 import { Modal } from '../components/Modal';
+import { StatusFeedbackTabs } from '../components/StatusFeedbackTabs';
 import statusFeedbackService, {
   ActivityWeek, ComplianceRow, PROGRESS_STATUSES, WeekBoard, StatusFeedbackEntry,
   mondayOf, shiftWeeks, weekLabel,
@@ -13,7 +14,7 @@ import statusFeedbackService, {
 
 const MANAGER_ROLES = ['admin', 'pm', 'executive'];
 
-const STATUS_STYLE: Record<string, string> = {
+export const STATUS_STYLE: Record<string, string> = {
   'On Track': 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
   'Delayed': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
   'Blocked': 'bg-rose-500/10 text-rose-500 border-rose-500/20',
@@ -21,7 +22,7 @@ const STATUS_STYLE: Record<string, string> = {
   'Completed': 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
 };
 
-const STATUS_ICON: Record<string, any> = {
+export const STATUS_ICON: Record<string, any> = {
   'On Track': CheckCircle2,
   'Delayed': CircleAlert,
   'Blocked': Ban,
@@ -29,7 +30,7 @@ const STATUS_ICON: Record<string, any> = {
   'Completed': CheckCircle2,
 };
 
-const fmtDay = (iso?: string | null) => {
+export const fmtDay = (iso?: string | null) => {
   if (!iso) return '—';
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
@@ -365,6 +366,8 @@ export const StatusFeedback: React.FC = () => {
           )}
         </div>
       </div>
+
+      <StatusFeedbackTabs />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <Stat label="Due this week" value={board?.due ?? '—'} />
