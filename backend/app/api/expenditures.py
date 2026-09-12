@@ -35,4 +35,18 @@ def create_expenditure(
         user_id=current_user.user_id,
         metadata=exp_in.dict()
     )
+
+    # Mirror the spend into Strat Edge Finance — the suite's ledger. Fire and
+    # forget, and keyed on the Portal's own exp_id so a retry cannot double-post.
+    from ..core.finance_client import notify_finance
+    notify_finance(
+        external_id=f"portal-exp-{db_exp.exp_id}",
+        project_id=db_exp.project_id,
+        activity_id=db_exp.activity_id,
+        category=db_exp.category,
+        description=db_exp.description,
+        amount=db_exp.amount,
+        spend_date=db_exp.spend_date,
+    )
+
     return db_exp
