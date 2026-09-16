@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   AlertTriangle, 
   Loader2, 
@@ -19,10 +20,17 @@ import { CustomSelect } from '../components/CustomSelect';
 
 import { FileUploadZone } from '../components/FileUploadZone';
 
+// "All projects" in the filter. Project ids are positive, so 0 is free.
+const ALL_PROJECTS = 0;
+
 export const Risks: React.FC = () => {
+  const location = useLocation();
   const [risks, setRisks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  // A project page's "view all risks" arrives with that project already chosen.
+  const [selectedProjectId, setSelectedProjectId] = useState<number>(
+    Number((location.state as any)?.projectId) || ALL_PROJECTS
+  );
   const [projects, setProjects] = useState<any[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [resolveModal, setResolveModal] = useState<{ isOpen: boolean; riskId: number | null; description: string }>({
@@ -31,25 +39,37 @@ export const Risks: React.FC = () => {
     description: ''
   });
 
-  const fetchData = async () => {
+  // Switching projects quickly must not let a slower, older answer win.
+  const latestRequest = useRef(0);
+
+  const fetchData = async (projectId: number = selectedProjectId) => {
+    const request = ++latestRequest.current;
     try {
       const [projRes, riskRes] = await Promise.all([
         api.get('/projects/'),
-        riskService.getRisks()
+        riskService.getRisks(projectId || undefined)
       ]);
+      if (request !== latestRequest.current) return;
       setProjects(projRes.data);
       setRisks(riskRes);
-      if (projRes.data.length > 0) setSelectedProjectId(projRes.data[0].project_id);
     } catch (err) {
       console.error(err);
+      if (request === latestRequest.current) setRisks([]);
     } finally {
-      setLoading(false);
+      if (request === latestRequest.current) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    setLoading(true);
+    fetchData(selectedProjectId);
+  }, [selectedProjectId]);
+
+  const projectName = (id: number) => projects.find(p => p.project_id === id)?.project_name || `Project ${id}`;
+  const projectOptions = [
+    { value: ALL_PROJECTS, label: 'All my projects' },
+    ...projects.map(p => ({ value: p.project_id, label: p.project_name }))
+  ];
 
   const handleResolve = (risk: any) => {
     setResolveModal({ isOpen: true, riskId: risk.risk_id, description: risk.description });
@@ -67,7 +87,7 @@ export const Risks: React.FC = () => {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-12">
+      <div className="flex flex-wrap items-center justify-between gap-6 mb-12">
         <div>
           <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-2 tracking-tighter flex items-center gap-4">
             <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/20">
@@ -77,6 +97,14 @@ export const Risks: React.FC = () => {
           </h1>
           <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] ml-16">Portfolio Exposure & Mitigation Tracking</p>
         </div>
+        <div className="flex flex-wrap items-end gap-4">
+        <CustomSelect
+          label="Project"
+          value={selectedProjectId}
+          onChange={val => setSelectedProjectId(Number(val) || ALL_PROJECTS)}
+          options={projectOptions}
+          className="w-72 max-w-full"
+        />
         <button 
           onClick={() => setIsAddModalOpen(true)}
           className="bg-rose-600 hover:bg-rose-500 text-white px-8 py-4 rounded-[1.5rem] font-black uppercase tracking-widest text-xs transition-all flex items-center gap-3 shadow-2xl shadow-rose-600/20 group border border-rose-500/20"
@@ -84,6 +112,7 @@ export const Risks: React.FC = () => {
           <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" />
           LOG NEW RISK
         </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
@@ -104,7 +133,12 @@ export const Risks: React.FC = () => {
                 <DenseCell flex={4}>
                   <div className="flex items-center gap-4 py-4">
                     {risk.status === 'Open' ? <Clock className="w-5 h-5 text-rose-500 opacity-50" /> : <ShieldCheck className="w-5 h-5 text-emerald-500" />}
-                    <span className="font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight text-sm leading-tight">{risk.description}</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight text-sm leading-tight">{risk.description}</span>
+                      {selectedProjectId === ALL_PROJECTS && (
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{projectName(risk.project_id)}</span>
+                      )}
+                    </div>
                   </div>
                 </DenseCell>
                 <DenseCell flex={1.5} align="center">
@@ -136,9 +170,10 @@ export const Risks: React.FC = () => {
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Log New Project Risk">
         <AddRiskForm 
           projects={projects} 
+          defaultProjectId={selectedProjectId || undefined}
           onSuccess={() => {
             setIsAddModalOpen(false);
-            riskService.getRisks().then(setRisks);
+            fetchData();
           }} 
         />
       </Modal>
@@ -165,9 +200,9 @@ const StatCard = ({ label, value, color }: { label: string; value: number; color
   </div>
 );
 
-const AddRiskForm: React.FC<{ projects: any[]; onSuccess: () => void }> = ({ projects, onSuccess }) => {
+const AddRiskForm: React.FC<{ projects: any[]; defaultProjectId?: number; onSuccess: () => void }> = ({ projects, defaultProjectId, onSuccess }) => {
   const [formData, setFormData] = useState({
-    project_id: projects[0]?.project_id || '',
+    project_id: defaultProjectId || projects[0]?.project_id || '',
     description: '',
     impact: 'M',
     mitigation_action: ''

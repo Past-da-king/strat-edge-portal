@@ -1,7 +1,10 @@
 import api from './api';
 
-export const getRisks = async () => {
-  const response = await api.get('risks/');
+// With a project id, only that project's risks (archived or not, as on its own
+// page); without, the risks on every live project you are on.
+export const getRisks = async (projectId?: number) => {
+  const params = projectId ? { project_id: projectId, include_archived: true } : undefined;
+  const response = await api.get('risks/', { params });
   return response.data;
 };
 
