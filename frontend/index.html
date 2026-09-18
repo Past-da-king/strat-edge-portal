@@ -12,6 +12,34 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Report widget: bug reports / feature requests reach an A.O.S agent with a screenshot of what
+         the user was looking at. MUST be before the app bundle — it captures console errors and failed
+         requests FROM PAGE LOAD, so installing it late sees none of them.
+         ⚠ The ingest endpoint is injected at BUILD time by Vite (VITE_REPORT_INGEST), so no secret and
+         no URL lives in this file. Unset = the button renders but reports cannot be sent; see
+         strat-edge-workflows/bug-report/README.md. -->
+    <script>
+      (function () {
+        // __REPORT_INGEST__ is replaced at build/dev time by the vite config (see vite.config.ts).
+        // Left blank when unset, which simply disables sending — the button still renders and the
+        // widget tells the user plainly that it could not send.
+        var base = "__REPORT_INGEST__";
+        window.STRAT_EDGE_REPORT = {
+          app: "Project Portal",
+          accent: "#0ea5e9",
+          version: "__REPORT_VERSION__",
+          ingest: base ? String(base).replace(/\/$/, "") + "/report" : "",
+          token: "__REPORT_TOKEN__",
+          user: function () {
+            try {
+              var raw = localStorage.getItem("user") || localStorage.getItem("auth_user") || sessionStorage.getItem("user");
+              return raw ? JSON.parse(raw) : null;
+            } catch (e) { return null; }
+          }
+        };
+      })();
+    </script>
+    <script src="/report-widget.js" defer></script>
   </head>
   <body class="bg-[#0a0a0c] text-slate-300 antialiased selection:bg-accent-primary/30 selection:text-white">
     <div id="root"></div>
