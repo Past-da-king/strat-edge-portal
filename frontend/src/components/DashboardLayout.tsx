@@ -19,8 +19,12 @@ import {
   Moon,
   Menu,
   X,
-  User
+  User,
+  ArrowLeftToLine
 } from 'lucide-react';
+
+// Strat Edge ID is the suite's front door: its launcher lists every app the person can open.
+const STRAT_EDGE_ID_URL = 'https://id.strategyedge.co.za';
 
 const SidebarItem = ({ icon: Icon, label, to, isCollapsed }: { icon: any, label: string, to: string, isCollapsed: boolean }) => (
   <NavLink
@@ -145,6 +149,14 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
               />
             ))
           }
+          <a
+            href={STRAT_EDGE_ID_URL}
+            className={`flex items-center gap-3 px-6 py-4 cursor-pointer transition-all border-r-2 border-transparent hover:bg-accent-primary/5 text-slate-500 dark:text-slate-400 hover:text-accent-primary ${isCollapsed ? 'justify-center px-0' : ''}`}
+            title={isCollapsed ? 'Back to ID' : 'Back to Strat Edge ID'}
+          >
+            <ArrowLeftToLine className="w-5 h-5 shrink-0" />
+            {!isCollapsed && <span className="text-sm font-medium whitespace-nowrap">Back to ID</span>}
+          </a>
         </nav>
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
@@ -203,6 +215,13 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                 </NavLink>
               ))
             }
+            <a
+              href={STRAT_EDGE_ID_URL}
+              className="flex items-center gap-4 p-5 rounded-2xl border transition-all bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-400"
+            >
+              <ArrowLeftToLine className="w-5 h-5" />
+              <span className="font-bold uppercase tracking-tight text-sm">Back to ID</span>
+            </a>
             <button
               onClick={handleLogout}
               className="flex items-center gap-4 p-5 rounded-2xl border border-rose-500/20 bg-rose-500/5 text-rose-500 mt-8"
