@@ -193,7 +193,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
       {/* Mobile Navigation Drawer (Overlay) */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-[60] bg-background animate-in slide-in-from-right duration-300 p-8 pt-24">
+        <div className="lg:hidden fixed inset-0 z-[60] bg-background animate-in slide-in-from-right duration-300 p-8 pt-24 pb-28 overflow-y-auto overscroll-contain">
           <div className="flex flex-col gap-2">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Navigation Network</p>
             {navItems
