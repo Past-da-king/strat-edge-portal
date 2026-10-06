@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.orm import Session
-from ..models.database import get_db, Task, TaskOutput, User
+from ..models.database import get_db, Task, TaskOutput, User, Project
 from ..schemas.task import Task as TaskSchema, TaskCreate, TaskUpdate, TaskOutput as OutputSchema
 from .deps import get_current_user, get_current_active_admin
 from typing import List
@@ -183,14 +183,19 @@ async def upload_task_output(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    # Path inside the bucket
-    gcs_path = f"projects/{task.project_id}/tasks/{task_id}/{file.filename}"
-    
+    # SharePoint: the project's own folder (see services/file_locations.py)
+    from ..services import file_locations
+    project = db.query(Project).filter(Project.project_id == task.project_id).first()
+    folder = file_locations.task_output_folder(
+        task.project_id, project.project_name if project else None, task.activity_name, doc_type)
+
     content = await file.read()
-    StorageService.upload_file(
+    gcs_path = StorageService.upload_file(
         file_content=content,
-        destination_path=gcs_path,
-        content_type=file.content_type
+        destination_path=file.filename,
+        content_type=file.content_type,
+        folder=folder,
+        name=file.filename
     )
     
     db_output = TaskOutput(

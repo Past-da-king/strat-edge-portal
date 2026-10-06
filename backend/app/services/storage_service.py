@@ -1,72 +1,91 @@
+"""Where the Portal's files live.
+
+OPERATOR RULING (Ayanda, 7 Oct 2026): every document in a Strat Edge system goes
+to SharePoint (Company Docs site) the moment it is added, in the project's own
+folder. No cloud bucket, no blob store.
+
+upload_file() saves to SharePoint and returns the key "sp:<driveItemId>:<name>",
+which is what gets stored in file_path. get_signed_url() / delete_file() take
+that key back. Rows saved before the move hold a Google Cloud Storage path
+("projects/1/tasks/11/x.pdf"); those still resolve through GCS until
+scripts/migrate_gcs_to_sharepoint.py (or POST /admin/migrate-files) has moved
+them, so nothing breaks in between.
+
+Where a file goes is decided in app/services/file_locations.py.
+"""
 import os
-from google.cloud import storage
-from datetime import datetime, timedelta
+from datetime import timedelta
+from typing import Optional
+
 from ..core.config import settings
+from . import sharepoint_files as sp
+
+
+def is_sp(path: Optional[str]) -> bool:
+    return sp.is_key(path)
+
 
 class StorageService:
     _client = None
 
+    # ── legacy Google Cloud Storage (read/delete of old rows only) ──────────
     @classmethod
     def get_client(cls):
         if cls._client is None:
-            print(f"DEBUG: Initializing GCS Client with: {settings.GOOGLE_APPLICATION_CREDENTIALS}")
-            abs_path = os.path.abspath(settings.GOOGLE_APPLICATION_CREDENTIALS)
-            print(f"DEBUG: Absolute path: {abs_path}")
-            
+            from google.cloud import storage
             if os.path.exists(settings.GOOGLE_APPLICATION_CREDENTIALS):
-                try:
-                    cls._client = storage.Client.from_service_account_json(
-                        settings.GOOGLE_APPLICATION_CREDENTIALS
-                    )
-                    print("DEBUG: GCS Client initialized successfully")
-                except Exception as e:
-                    print(f"DEBUG: GCS Initialization Error: {str(e)}")
-                    raise e
+                cls._client = storage.Client.from_service_account_json(settings.GOOGLE_APPLICATION_CREDENTIALS)
             else:
-                # Fallback to default auth (useful for production environments with env vars)
                 cls._client = storage.Client(project=settings.GCP_PROJECT_ID)
         return cls._client
 
     @classmethod
-    def upload_file(cls, file_content: bytes, destination_path: str, content_type: str = None) -> str:
+    def read_legacy(cls, file_path: str) -> Optional[bytes]:
+        """Bytes of a file still in the old bucket, or None when it is not there."""
+        blob = cls.get_client().bucket(settings.GCP_BUCKET_NAME).blob(file_path)
+        return blob.download_as_bytes() if blob.exists() else None
+
+    # ── the store ───────────────────────────────────────────────────────────
+    @classmethod
+    def upload_file(cls, file_content: bytes, destination_path: str, content_type: str = None,
+                    folder: Optional[str] = None, name: Optional[str] = None) -> str:
+        """Save to SharePoint and return the key to store in file_path.
+
+        `folder` is the full folder inside the Company Docs library (see
+        file_locations); `name` is the file name. When SharePoint is not
+        configured (a laptop with no Microsoft credentials) this raises: files are
+        never silently put anywhere else.
         """
-        Uploads a file to GCS and returns the path.
-        """
-        client = cls.get_client()
-        bucket = client.bucket(settings.GCP_BUCKET_NAME)
-        blob = bucket.blob(destination_path)
-        
-        blob.upload_from_string(file_content, content_type=content_type)
-        return destination_path
+        if not sp.configured():
+            raise RuntimeError("SharePoint is not configured: set MS_GRAPH_TENANT_ID, MS_GRAPH_CLIENT_ID "
+                               "and MS_GRAPH_CLIENT_SECRET.")
+        fname = name or os.path.basename(destination_path)
+        item = sp.put(folder or "10 Projects/02 Internal Operations and Meetings/Unfiled",
+                      fname, file_content, content_type)
+        return sp.make_key(item["id"], item.get("name") or fname)
 
     @classmethod
     def get_signed_url(cls, file_path: str, expiration_minutes: int = 60, inline: bool = False) -> str:
+        """A short-lived link the browser can open.
+
+        SharePoint: Microsoft's own pre-authenticated link (good for about an hour);
+        inline asks for the embeddable preview so a PDF or image opens in the page.
+        Old GCS rows: a signed Google link, as before.
         """
-        Generates a temporary signed URL for secure access to a private file.
-        If inline is True, the file will be viewable in-browser rather than downloaded.
-        """
+        if is_sp(file_path):
+            return sp.browser_url(file_path, inline=inline)
         client = cls.get_client()
-        bucket = client.bucket(settings.GCP_BUCKET_NAME)
-        blob = bucket.blob(file_path)
-
+        blob = client.bucket(settings.GCP_BUCKET_NAME).blob(file_path)
         disposition = "inline" if inline else "attachment"
-
-        url = blob.generate_signed_url(
-            version="v4",
-            expiration=timedelta(minutes=expiration_minutes),
-            method="GET",
-            response_disposition=f"{disposition}; filename=\"{os.path.basename(file_path)}\""
-        )
-        return url
-
+        return blob.generate_signed_url(
+            version="v4", expiration=timedelta(minutes=expiration_minutes), method="GET",
+            response_disposition=f"{disposition}; filename=\"{os.path.basename(file_path)}\"")
 
     @classmethod
     def delete_file(cls, file_path: str):
-        """
-        Deletes a file from GCS.
-        """
-        client = cls.get_client()
-        bucket = client.bucket(settings.GCP_BUCKET_NAME)
-        blob = bucket.blob(file_path)
+        if is_sp(file_path):
+            sp.delete(file_path)
+            return
+        blob = cls.get_client().bucket(settings.GCP_BUCKET_NAME).blob(file_path)
         if blob.exists():
             blob.delete()

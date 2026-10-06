@@ -110,13 +110,18 @@ async def upload_risk_proof(
     # Imported here so the rest of the risk routes load without the GCP client.
     from ..services.storage_service import StorageService
 
-    gcs_path = f"projects/{risk.project_id}/risks/{risk_id}/{file.filename}"
+    from ..services import file_locations
+    project = db.query(Project).filter(Project.project_id == risk.project_id).first()
+    folder = file_locations.risk_proof_folder(
+        risk.project_id, project.project_name if project else None, risk_id)
 
     content = await file.read()
-    StorageService.upload_file(
+    gcs_path = StorageService.upload_file(
         file_content=content,
-        destination_path=gcs_path,
-        content_type=file.content_type
+        destination_path=file.filename,
+        content_type=file.content_type,
+        folder=folder,
+        name=file.filename
     )
 
     db_proof = RiskProof(

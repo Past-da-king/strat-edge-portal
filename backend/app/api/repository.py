@@ -89,14 +89,25 @@ async def upload_personal_file(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Path: projects/{project_id}/personal/{filename}
-    gcs_path = f"projects/{project_id}/personal/{file.filename}"
-    
+    # SharePoint: the project's own folder, mirroring the repository folders
+    from ..services import file_locations
+    project = db.query(Project).filter(Project.project_id == project_id).first()
+    names, cur, guard = [], (db.query(RepositoryFile).filter(RepositoryFile.file_id == parent_id).first()
+                             if parent_id else None), 0
+    while cur is not None and guard < 20:
+        names.insert(0, cur.name)
+        cur = (db.query(RepositoryFile).filter(RepositoryFile.file_id == cur.parent_id).first()
+               if cur.parent_id else None)
+        guard += 1
+    folder = file_locations.repository_folder(project_id, project.project_name if project else None, names)
+
     content = await file.read()
-    StorageService.upload_file(
+    gcs_path = StorageService.upload_file(
         file_content=content,
-        destination_path=gcs_path,
-        content_type=file.content_type
+        destination_path=file.filename,
+        content_type=file.content_type,
+        folder=folder,
+        name=file.filename
     )
     
     db_file = RepositoryFile(

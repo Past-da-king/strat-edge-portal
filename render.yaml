@@ -12,6 +12,14 @@ services:
         sync: false
       - key: SECRET_KEY
         generateValue: true
+      # Files live in SharePoint (Company Docs). The same Entra app as the Mthashana CRM.
+      - key: MS_GRAPH_TENANT_ID
+        sync: false
+      - key: MS_GRAPH_CLIENT_ID
+        sync: false
+      - key: MS_GRAPH_CLIENT_SECRET
+        sync: false
+      # Old Google bucket: only read while scripts move the last files across.
       - key: GCP_PROJECT_ID
         value: custom-mix-428318-h3
       - key: GCP_BUCKET_NAME
