@@ -12,16 +12,32 @@ from . import sharepoint_files as sp
 from .storage_service import StorageService, is_sp
 
 
-def _identical_in_folder(folder: str, data: bytes):
+OFFICE = (".docx", ".doc", ".pptx", ".ppt", ".xlsx", ".xls")
+
+
+def _same(back: bytes, data: bytes, name: str) -> bool:
+    """SharePoint rewrites Office files on upload (document properties), so those
+    come back a few KB larger; everything else must be byte-identical."""
+    if back == data:
+        return True
+    if name.lower().endswith(OFFICE):
+        return len(back) >= len(data) and len(back) - len(data) <= max(20000, int(len(data) * 0.02))
+    return False
+
+
+def _identical_in_folder(folder: str, data: bytes, name: str = ""):
     from urllib.parse import quote
     parts = "/".join(sp.clean(x, "Files") for x in folder.split("/") if x.strip())
     res = sp.graph("GET", f"/drives/{sp.drive_id()}/root:/{quote(parts)}:/children?$select=id,name,size,file")
     if res.status_code != 200:
         return None
     for it in res.json().get("value", []):
-        if "file" in it and it.get("size") == len(data):
+        if "file" not in it:
+            continue
+        office = name.lower().endswith(OFFICE) and it["name"].lower() == sp.clean(name).lower()
+        if it.get("size") == len(data) or (office and 0 <= it.get("size", 0) - len(data) <= max(20000, int(len(data) * 0.02))):
             key = sp.make_key(it["id"], it["name"])
-            if sp.read(key) == data:
+            if _same(sp.read(key), data, name):
                 return key
     return None
 
@@ -40,15 +56,15 @@ def _move(path: str, name: str, folder: str, apply: bool):
     if data is None:
         return "missing in the old bucket", None
     if not apply:
-        same = _identical_in_folder(folder, data)
+        same = _identical_in_folder(folder, data, name)
         return (f"would reuse the identical file already in {folder}" if same
                 else f"would copy {len(data)} B -> {folder}/{name}"), None
-    key = _identical_in_folder(folder, data)       # same bytes already there: reuse, no duplicate
+    key = _identical_in_folder(folder, data, name)  # same bytes already there: reuse, no duplicate
     if key:
         return f"already in SharePoint, reused ({len(data)} B) -> {folder}", key
     item = sp.put(folder, name, data)
     key = sp.make_key(item["id"], item["name"])
-    if sp.read(key) != data:
+    if not _same(sp.read(key), data, item["name"]):
         return "read-back differs, not switched", None
     return f"copied {len(data)} B -> {folder}/{item['name']}", key
 
