@@ -50,6 +50,12 @@ app.include_router(reports.router, prefix="/reports", tags=["Reports"])
 app.include_router(status_feedback.router, prefix="/status-feedback", tags=["Status Feedback"])
 app.include_router(status_feedback_report.router, prefix="/status-feedback", tags=["Status Feedback"])
 
+@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
+def root():
+    # Render's deploy check asks for "/" (HEAD); a 404 there fails the deploy.
+    return {"status": "operational"}
+
+
 @app.get("/health")
 def health_check():
     return {"status": "operational", "version": "2.0.0"}
