@@ -8,8 +8,8 @@ upload_file() saves to SharePoint and returns the key "sp:<driveItemId>:<name>",
 which is what gets stored in file_path. get_signed_url() / delete_file() take
 that key back. Rows saved before the move hold a Google Cloud Storage path
 ("projects/1/tasks/11/x.pdf"); those still resolve through GCS until
-scripts/migrate_gcs_to_sharepoint.py (or POST /admin/migrate-files) has moved
-them, so nothing breaks in between.
+the one-off migration (7 Oct 2026) moved them, so nothing breaks in between. (They have all been moved; the migration tool was
+removed once it had run. See the skill store-app-files-in-sharepoint-not-blob.)
 
 Where a file goes is decided in app/services/file_locations.py.
 """
@@ -23,6 +23,10 @@ from . import sharepoint_files as sp
 
 def is_sp(path: Optional[str]) -> bool:
     return sp.is_key(path)
+
+
+class FileGone(Exception):
+    """A file the database still lists but no store holds any more."""
 
 
 class StorageService:
@@ -73,9 +77,13 @@ class StorageService:
         Old GCS rows: a signed Google link, as before.
         """
         if is_sp(file_path):
+            if sp.item(file_path) is None:
+                raise FileGone(sp.parse_key(file_path)[1])
             return sp.browser_url(file_path, inline=inline)
         client = cls.get_client()
         blob = client.bucket(settings.GCP_BUCKET_NAME).blob(file_path)
+        if not blob.exists():
+            raise FileGone(os.path.basename(file_path.replace("\\", "/")))
         disposition = "inline" if inline else "attachment"
         return blob.generate_signed_url(
             version="v4", expiration=timedelta(minutes=expiration_minutes), method="GET",

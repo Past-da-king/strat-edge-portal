@@ -12,6 +12,23 @@ app = FastAPI(
     description="Enterprise Project Management Portal - Decoupled Architecture"
 )
 
+from fastapi.responses import JSONResponse
+from .services.storage_service import FileGone
+from .services.sharepoint_files import SharePointError
+
+
+@app.exception_handler(FileGone)
+async def file_gone(_request, exc: FileGone):
+    return JSONResponse(status_code=410, content={
+        "detail": f"This file ({exc}) was lost before files moved to SharePoint. Please upload it again."})
+
+
+@app.exception_handler(SharePointError)
+async def sharepoint_unavailable(_request, exc: SharePointError):
+    return JSONResponse(status_code=503, headers={"Retry-After": "30"}, content={
+        "detail": "SharePoint could not be reached just now. Nothing is lost; try again in a minute."})
+
+
 @app.on_event("startup")
 def sync_schema():
     """Keep the live database in step with the model (adds new columns only)."""

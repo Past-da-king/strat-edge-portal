@@ -13,6 +13,7 @@ Inside the project folder:
   task output, anything else (drafts, evidence)    ->  <00 Project Plan | 00 Management>/Task Drafts/<task name>
   repository file                                  ->  <01 Mthashana Document Inventory | 00 Management/Repository>/<repository folders>
   risk proof                                       ->  <00 Project Plan | 00 Management>/Risk Register/Risk <id>
+  imported plan workbook                           ->  <00 Project Plan | 00 Management>/Plan imports
 
 Mthashana keeps its plan files in "00 Project Plan"; the internal projects use
 "00 Management". The names are the real folder names: do not "tidy" them.
@@ -67,3 +68,8 @@ def repository_folder(project_id, project_name, folder_names) -> str:
 
 def risk_proof_folder(project_id, project_name, risk_id) -> str:
     return f"{_base(project_id, project_name)}/{_mgmt(project_id)}/Risk Register/Risk {risk_id}"
+
+
+def plan_import_folder(project_id, project_name) -> str:
+    """The workbook a project was created from, filed with its plan."""
+    return f"{_base(project_id, project_name)}/{_mgmt(project_id)}/Plan imports"

@@ -32,7 +32,17 @@ async def import_project(
     current_user: User = Depends(get_current_active_admin)
 ):
     content = await file.read()
-    return ImportService.import_project_excel(db, content, current_user.user_id)
+    project = ImportService.import_project_excel(db, content, current_user.user_id)
+    # The workbook is a document too: file it with the project's plan files in SharePoint.
+    try:
+        from ..services import file_locations
+        from ..services.storage_service import StorageService
+        folder = file_locations.plan_import_folder(project.project_id, project.project_name)
+        StorageService.upload_file(content, file.filename or "plan.xlsx", file.content_type,
+                                   folder=folder, name=file.filename or "plan.xlsx")
+    except Exception as e:           # the import itself succeeded; say so in the log, not to the user
+        print(f"WARNING: imported plan workbook not filed in SharePoint: {e}")
+    return project
 
 @router.get("/", response_model=List[Any])
 def list_projects(

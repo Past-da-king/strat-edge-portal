@@ -124,7 +124,11 @@ def item(key: str) -> Optional[dict]:
     item_id, _ = parse_key(key)
     res = graph("GET", f"/drives/{drive_id()}/items/{item_id}"
                        "?$select=id,name,webUrl,size,@microsoft.graph.downloadUrl", timeout=20)
-    return res.json() if res.status_code == 200 else None
+    if res.status_code == 404:
+        return None                        # the ONLY "gone" answer
+    if res.status_code != 200:
+        raise SharePointError(f"SharePoint answered {res.status_code}.")
+    return res.json()
 
 
 def read(key: str) -> bytes:
