@@ -282,20 +282,3 @@ def import_bundled_plan(
         )
     return result
 
-
-@router.post("/migrate-files/", status_code=status.HTTP_200_OK)
-def migrate_files_to_sharepoint(
-    apply: bool = False,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_admin),
-):
-    """Move files still in the old Google bucket into SharePoint (admin only).
-
-    apply=false (default) only reports what would move. The bucket copy is kept.
-    """
-    from ..services import file_migration, sharepoint_files
-    if not sharepoint_files.configured():
-        raise HTTPException(status_code=409, detail="SharePoint is not configured on this server.")
-    rows = file_migration.run(db, apply=apply)
-    return {"applied": apply, "count": len(rows),
-            "rows": [{"kind": k, "id": i, "name": n, "result": s} for k, i, n, s in rows]}

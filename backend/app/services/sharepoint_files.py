@@ -144,6 +144,14 @@ def browser_url(key: str, inline: bool = False) -> str:
         res = graph("POST", f"/drives/{drive_id()}/items/{item_id}/preview", json={}, timeout=30)
         if res.status_code == 200 and res.json().get("getUrl"):
             return res.json()["getUrl"]
+    # A short-lived link that downloads the file with no further sign-in: the
+    # redirect target of /content, not followed.
+    item_id, _ = parse_key(key)
+    res = httpx.get(f"{GRAPH}/drives/{drive_id()}/items/{item_id}/content",
+                    headers={"Authorization": f"Bearer {_access_token()}"}, timeout=30,
+                    follow_redirects=False)
+    if res.status_code in (301, 302, 303, 307) and res.headers.get("location"):
+        return res.headers["location"]
     return it.get("@microsoft.graph.downloadUrl") or it["webUrl"]
 
 
