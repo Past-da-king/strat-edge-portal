@@ -42,6 +42,8 @@ async def import_project(
                                    folder=folder, name=file.filename or "plan.xlsx")
     except Exception as e:           # the import itself succeeded; say so in the log, not to the user
         print(f"WARNING: imported plan workbook not filed in SharePoint: {e}")
+    from ..core.finance_client import notify_project
+    notify_project(project)
     return project
 
 @router.get("/", response_model=List[Any])
@@ -210,6 +212,8 @@ def create_project(
         user_id=current_user.user_id,
         metadata=project_in.dict()
     )
+    from ..core.finance_client import notify_project
+    notify_project(project)
     return project
 
 @router.put("/{project_id}/", response_model=ProjectSchema)
@@ -240,6 +244,8 @@ def update_project(
         user_id=current_user.user_id,
         metadata=update_data
     )
+    from ..core.finance_client import notify_project
+    notify_project(project)
     return project
 
 @router.delete("/{project_id}/", status_code=status.HTTP_204_NO_CONTENT)

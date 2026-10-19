@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from ..models.database import get_db, Expenditure, User
+from ..models.database import get_db, Expenditure, Project, User
 from ..schemas.expenditure import Expenditure as ExpenditureSchema, ExpenditureCreate
 from .deps import get_current_user
 from typing import List
@@ -39,9 +39,12 @@ def create_expenditure(
     # Mirror the spend into Strat Edge Finance — the suite's ledger. Fire and
     # forget, and keyed on the Portal's own exp_id so a retry cannot double-post.
     from ..core.finance_client import notify_finance
+    project = db.query(Project).filter(Project.project_id == db_exp.project_id).first()
     notify_finance(
         external_id=f"portal-exp-{db_exp.exp_id}",
         project_id=db_exp.project_id,
+        project_name=project.project_name if project else None,
+        client=project.client if project else None,
         activity_id=db_exp.activity_id,
         category=db_exp.category,
         description=db_exp.description,

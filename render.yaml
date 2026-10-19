@@ -12,6 +12,10 @@ services:
         sync: false
       - key: SECRET_KEY
         generateValue: true
+      - key: FINANCE_URL
+        value: https://finance-chi-ruby.vercel.app
+      - key: FINANCE_INGEST_SECRET
+        sync: false
       # Files live in SharePoint (Company Docs). The same Entra app as the Mthashana CRM.
       - key: MS_GRAPH_TENANT_ID
         sync: false
