@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
 from .models.database import ensure_schema
-from .api import projects, auth, tasks, risks, expenditures, repository, reports, admin, sso, status_feedback
+from .api import projects, auth, tasks, risks, expenditures, repository, reports, admin, sso, status_feedback, tenders
 from .api import status_feedback_report
 
 app = FastAPI(
@@ -61,6 +61,7 @@ app.include_router(admin.router, prefix="/admin", tags=["Admin"])
 app.include_router(projects.router, prefix="/projects", tags=["Projects"])
 app.include_router(tasks.router, prefix="/tasks", tags=["Tasks"])
 app.include_router(risks.router, prefix="/risks", tags=["Risks"])
+app.include_router(tenders.router, prefix="/tenders", tags=["Tenders"])
 app.include_router(expenditures.router, prefix="/expenditures", tags=["Expenditures"])
 app.include_router(repository.router, prefix="/repository", tags=["Repository"])
 app.include_router(reports.router, prefix="/reports", tags=["Reports"])

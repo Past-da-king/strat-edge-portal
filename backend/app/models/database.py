@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey, Text, DateTime, func, UniqueConstraint
+from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey, Text, DateTime, JSON, func, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from ..core.config import settings
@@ -278,6 +278,49 @@ class RiskProof(Base):
     risk = relationship("Risk", back_populates="proofs")
     uploader = relationship("User")
 
+
+class TenderBrief(Base):
+    """One tender brief, as filed by the tender watcher.
+
+    The watcher scans the tender portals, scores each brief for how well it fits
+    Strat Edge, and posts the batch to /tenders/ingest. This table is where a
+    person then reads it, shortlists it, or calls it a no-bid.
+
+    The id is the watcher's own uuid rather than a local sequence: re-posting a
+    brief it has already sent updates the row instead of making a second copy,
+    so a watcher that reruns is harmless.
+    """
+
+    __tablename__ = "tender_briefs"
+
+    id = Column(String, primary_key=True, index=True)   # uuid, chosen by the watcher
+    title = Column(String, nullable=False)
+    reference = Column(String)                          # the buyer's tender number
+    source = Column(String)                             # which portal it came from
+    source_url = Column(String)                         # the page a person can open
+    buyer = Column(String)
+    category = Column(String)                           # see TENDER_CATEGORIES
+    published = Column(Date)
+    closing = Column(Date, index=True)
+    days_to_close = Column(Integer)                     # as at the last ingest
+    amount = Column(String)                             # kept as written, e.g. "R 1 200 000"
+    summary = Column(Text)
+    requirements = Column(JSON, default=list)           # [ "CSD registration", ... ]
+    documents = Column(JSON, default=list)              # [ {name, url, local_path, size_bytes} ]
+    relevance_score = Column(Integer, default=0)        # the watcher's 0-100 fit score
+    relevance_reason = Column(Text)                     # why it scored that
+    status = Column(String, default="new")              # see TENDER_STATUSES
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+# The categories and statuses a brief may carry. The watcher posts these exact
+# strings, so anything else is refused at the door rather than stored as a
+# near-duplicate that no filter will ever find.
+TENDER_CATEGORIES = ["IT and cyber", "IT", "Cyber", "Other"]
+TENDER_STATUSES = ["new", "shortlisted", "bid", "no-bid"]
+
+
 # Columns added after the original schema shipped. Adding them here (rather than
 # in a migration tool) keeps an already-populated SQLite or Postgres database in
 # step on deploy - the check is idempotent and safe to run on every boot.
@@ -309,7 +352,7 @@ LATER_COLUMNS = {
 
 # Tables introduced after the original schema shipped. create_all only touches
 # what is missing, so this is safe to run against a populated database.
-LATER_TABLES = ["status_feedback"]
+LATER_TABLES = ["status_feedback", "tender_briefs"]
 
 
 def ensure_schema():

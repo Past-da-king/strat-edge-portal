@@ -8,14 +8,18 @@ import {
   CheckCircle2,
   ArrowUpRight,
   Download,
-  FileText
+  FileText,
+  Gavel,
+  ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import projectService from '../services/projectService';
+import tenderService, { TenderBrief, daysLeft, daysLeftLabel, fmtDate } from '../services/tenderService';
 import { ProjectCard } from '../components/ProjectCard';
 
 export const Overview: React.FC = () => {
   const [projects, setProjects] = useState<any[]>([]);
+  const [tenders, setTenders] = useState<TenderBrief[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -34,6 +38,8 @@ export const Overview: React.FC = () => {
       }
     };
     fetchPortfolio();
+    // Tenders are a side order on this page: if they fail, the portfolio still shows.
+    tenderService.getTenders().then(setTenders).catch(() => setTenders([]));
   }, []);
 
   const handleDownloadReport = async (projectId: number, projectName: string) => {
@@ -86,6 +92,9 @@ export const Overview: React.FC = () => {
         <StatCard label="Health Check" value="98.2%" icon={<CheckCircle2 />} />
       </div>
 
+      {/* Tenders: what the watcher has filed, and what closes first */}
+      <TendersSoonCard tenders={tenders} onOpen={() => navigate('/tenders')} />
+
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
           Active Initiatives
@@ -125,6 +134,67 @@ export const Overview: React.FC = () => {
           </div>
         ))}
       </div>
+    </div>
+  );
+};
+
+/** The tender watcher's board in miniature: how many close this week, and the three first. */
+const TendersSoonCard = ({ tenders, onOpen }: { tenders: TenderBrief[]; onOpen: () => void }) => {
+  const closingSoon = tenders.filter((t) => {
+    const n = daysLeft(t.closing);
+    return n !== null && n >= 0 && n <= 7;
+  }).length;
+
+  const soonest = tenders
+    .filter((t) => {
+      const n = daysLeft(t.closing);
+      return n !== null && n >= 0;
+    })
+    .sort((a, b) => (daysLeft(a.closing) ?? 0) - (daysLeft(b.closing) ?? 0))
+    .slice(0, 3);
+
+  return (
+    <div className="glass rounded-[2rem] border border-slate-200 dark:border-white/5 shadow-sm mb-10 lg:mb-16 overflow-hidden">
+      <button
+        onClick={onOpen}
+        className="w-full flex items-center justify-between gap-4 px-6 lg:px-8 py-5 hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors text-left"
+      >
+        <span className="flex items-center gap-3 min-w-0">
+          <span className="w-10 h-10 bg-accent-primary/10 rounded-xl flex items-center justify-center text-accent-primary shrink-0">
+            <Gavel className="w-5 h-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Tenders</span>
+            <span className="block text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+              {tenders.length === 0
+                ? 'Nothing filed yet'
+                : `${closingSoon} closing within 7 days`}
+            </span>
+          </span>
+        </span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-accent-primary flex items-center gap-1 shrink-0">
+          View all <ChevronRight className="w-4 h-4" />
+        </span>
+      </button>
+
+      {soonest.length > 0 && (
+        <div className="border-t border-slate-200 dark:border-white/5 divide-y divide-slate-200 dark:divide-white/5">
+          {soonest.map((t) => (
+            <div key={t.id} className="flex items-center justify-between gap-4 px-6 lg:px-8 py-3">
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{t.title}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 truncate">{t.buyer || 'Buyer not listed'}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-[11px] font-black text-slate-700 dark:text-slate-200">{fmtDate(t.closing)}</p>
+                <p className={`text-[10px] font-black uppercase tracking-widest ${(daysLeft(t.closing) ?? 99) <= 3 ? 'text-rose-500' : 'text-amber-500'}`}>
+                  {daysLeftLabel(t.closing)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

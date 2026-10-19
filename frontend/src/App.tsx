@@ -16,6 +16,7 @@ import { Overview } from './pages/Overview'
 import { UserSettings } from './pages/UserSettings'
 import { StatusFeedback } from './pages/StatusFeedback'
 import { StatusFeedbackReport } from './pages/StatusFeedbackReport'
+import { Tenders } from './pages/Tenders'
 
 const PrivateRoute = ({ children, roles }: { children: React.ReactNode, roles?: string[] }) => {
   const userStr = localStorage.getItem('user');
@@ -104,6 +105,14 @@ function App() {
           <PrivateRoute roles={['admin', 'pm', 'executive']}>
             <DashboardLayout>
               <ProjectSetup />
+            </DashboardLayout>
+          </PrivateRoute>
+        } />
+
+        <Route path="/tenders" element={
+          <PrivateRoute>
+            <DashboardLayout>
+              <Tenders />
             </DashboardLayout>
           </PrivateRoute>
         } />
