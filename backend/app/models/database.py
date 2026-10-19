@@ -298,6 +298,7 @@ class TenderBrief(Base):
     reference = Column(String)                          # the buyer's tender number
     source = Column(String)                             # which portal it came from
     source_url = Column(String)                         # the page a person can open
+    slack_url = Column(String)                          # the Slack message holding the files
     buyer = Column(String)
     category = Column(String)                           # see TENDER_CATEGORIES
     published = Column(Date)
@@ -346,6 +347,12 @@ LATER_COLUMNS = {
     "projects": {
         "archived_at": ("TIMESTAMP", None),
         "archived_by": ("INTEGER", None),
+    },
+    "tender_briefs": {
+        # Where the documents actually live. The buyer's own url sits behind a
+        # sign-in for some buyers, and the watcher's copy lives on a machine that
+        # the Portal cannot reach, so the Slack message is the one that opens.
+        "slack_url": ("VARCHAR", None),
     },
 }
 

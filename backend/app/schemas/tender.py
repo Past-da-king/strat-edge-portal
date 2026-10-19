@@ -29,6 +29,7 @@ class TenderBriefBase(BaseModel):
     reference: Optional[str] = None
     source: Optional[str] = None
     source_url: Optional[str] = None
+    slack_url: Optional[str] = None    # the Slack message holding the documents
     buyer: Optional[str] = None
     category: Optional[str] = "Other"
     published: Optional[date] = None
@@ -90,6 +91,18 @@ class TenderBrief(TenderBriefBase):
     updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TenderStatusUpdate(BaseModel):
+    """What a person is allowed to change: the status, nothing else."""
+    status: str
+
+    @field_validator("status")
+    @classmethod
+    def known_status(cls, v):
+        if v not in TENDER_STATUSES:
+            raise ValueError(f"status must be one of {TENDER_STATUSES}")
+        return v
 
 
 class TenderIngest(BaseModel):

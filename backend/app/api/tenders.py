@@ -1,21 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import or_, func
 from sqlalchemy.orm import Session
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import List, Optional
 
 from ..models.database import get_db, TenderBrief as TenderBriefModel, User, TENDER_STATUSES
-from ..schemas.tender import TenderBrief, TenderIngest, TenderIngestResult
+from ..schemas.tender import TenderBrief, TenderIngest, TenderIngestResult, TenderStatusUpdate
 from .deps import get_current_user, get_current_active_admin
 
 router = APIRouter()
 
-# What a stored brief may be updated with: everything the watcher sends except
-# the id (which identifies the row) and updated_at (which the database keeps).
+# What a re-post may change: everything the watcher sends except the id (which
+# identifies the row), the status and created_at. The status is left out on
+# purpose: a person marks a brief shortlisted or no-bid from the Portal, and the
+# next morning's scan must not wipe that back to "new".
 WRITABLE = [
-    "title", "reference", "source", "source_url", "buyer", "category",
+    "title", "reference", "source", "source_url", "slack_url", "buyer", "category",
     "published", "closing", "days_to_close", "amount", "summary",
-    "requirements", "documents", "relevance_score", "relevance_reason", "status",
+    "requirements", "documents", "relevance_score", "relevance_reason",
     "created_at",
 ]
 
@@ -115,6 +117,7 @@ def ingest_briefs(
         row = db.query(TenderBriefModel).filter(TenderBriefModel.id == brief_id).first()
         if row is None:
             fields = {k: data.get(k) for k in WRITABLE if k != "created_at"}
+            fields["status"] = data.get("status") or "new"
             if data.get("created_at"):
                 fields["created_at"] = data["created_at"]
             row = TenderBriefModel(id=brief_id, **fields)
@@ -144,6 +147,40 @@ def ingest_briefs(
     )
 
     return TenderIngestResult(received=len(seen), created=created, updated=updated, ids=seen)
+
+
+@router.patch("/{tender_id}/status/", response_model=TenderBrief)
+def set_tender_status(
+    tender_id: str,
+    payload: TenderStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Move one brief along: new, shortlisted, bid or no-bid.
+
+    This is the only field a person owns; everything else on a brief belongs to
+    the watcher, and a re-post keeps whatever status was set here.
+    """
+    row = db.query(TenderBriefModel).filter(TenderBriefModel.id == tender_id).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Tender brief not found")
+
+    before = row.status
+    row.status = payload.status
+    db.commit()
+    db.refresh(row)
+
+    from ..core.audit import log_event
+    log_event(
+        db,
+        event_type="UPDATE",
+        category="TENDER",
+        description=f"Tender '{row.title[:80]}' moved from {before} to {row.status}",
+        user_id=current_user.user_id,
+        metadata={"id": row.id, "from": before, "to": row.status},
+    )
+
+    return row
 
 
 @router.get("/{tender_id}/", response_model=TenderBrief)

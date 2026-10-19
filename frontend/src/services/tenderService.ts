@@ -22,6 +22,7 @@ export interface TenderBrief {
   reference?: string | null;
   source?: string | null;
   source_url?: string | null;
+  slack_url?: string | null;
   buyer?: string | null;
   category?: string | null;
   published?: string | null;
@@ -89,6 +90,11 @@ const tenderService = {
   },
   getTender: async (id: string): Promise<TenderBrief> => {
     const res = await api.get(`/tenders/${id}/`);
+    return res.data;
+  },
+  /** The one thing a person owns on a brief. Everything else is the watcher's. */
+  setStatus: async (id: string, status: string): Promise<TenderBrief> => {
+    const res = await api.patch(`/tenders/${id}/status/`, { status });
     return res.data;
   },
 };

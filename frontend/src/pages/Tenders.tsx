@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Gavel, Loader2, Search, FilterX, ExternalLink, FileText, ChevronDown, ChevronUp, CalendarClock,
+  MessageSquare,
 } from 'lucide-react';
 import { CustomSelect } from '../components/CustomSelect';
 import tenderService, {
@@ -22,12 +23,47 @@ const STATUS_STYLE: Record<string, string> = {
   'no-bid': 'bg-slate-500/10 text-slate-500 border-slate-500/20',
 };
 
-const StatusBadge: React.FC<{ status?: string | null }> = ({ status }) => {
-  const key = status || 'new';
+/** The status is the one field a person owns, so it is a control, not a label. */
+const StatusSelect: React.FC<{
+  value: string;
+  busy?: boolean;
+  onChange: (next: string) => void;
+}> = ({ value, busy, onChange }) => (
+  <div className="relative inline-block max-w-full align-middle" onClick={(e) => e.stopPropagation()}>
+    <select
+      value={value || 'new'}
+      disabled={busy}
+      aria-label="Tender status"
+      onChange={(e) => onChange(e.target.value)}
+      className={`appearance-none w-auto max-w-full truncate pl-2.5 pr-5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider border cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary/30 disabled:opacity-40 ${STATUS_STYLE[value || 'new'] || STATUS_STYLE.new}`}
+    >
+      {TENDER_STATUSES.map((st) => (
+        <option key={st} value={st} className="bg-white dark:bg-[#1a1d23] text-slate-900 dark:text-white normal-case font-bold">
+          {st.replace('-', ' ')}
+        </option>
+      ))}
+    </select>
+    {busy
+      ? <Loader2 className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 animate-spin pointer-events-none" />
+      : <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />}
+  </div>
+);
+
+/** Where the documents actually are: the Slack message the watcher posted them to. */
+const SlackLink: React.FC<{ url?: string | null; compact?: boolean }> = ({ url, compact }) => {
+  if (!url) return null;
   return (
-    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${STATUS_STYLE[key] || STATUS_STYLE.new}`}>
-      {key.replace('-', ' ')}
-    </span>
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className={`font-black uppercase text-accent-primary hover:text-accent-secondary inline-flex items-center gap-1 ${compact ? 'text-[9px] tracking-wider' : 'text-[10px] tracking-widest'}`}
+    >
+      <MessageSquare className="w-3 h-3 shrink-0" />
+      <span className="whitespace-nowrap">Documents in Slack</span>
+      {!compact && <ExternalLink className="w-3 h-3 shrink-0" />}
+    </a>
   );
 };
 
@@ -93,11 +129,13 @@ const SourceLink: React.FC<{ brief: TenderBrief }> = ({ brief }) => (
         href={brief.source_url}
         target="_blank"
         rel="noreferrer"
+        onClick={(e) => e.stopPropagation()}
         className="text-[10px] font-black uppercase tracking-widest text-accent-primary hover:text-accent-secondary inline-flex items-center gap-1"
       >
         Open <ExternalLink className="w-3 h-3" />
       </a>
     )}
+    <SlackLink url={brief.slack_url} compact />
   </div>
 );
 
@@ -135,6 +173,9 @@ const DetailPanel: React.FC<{ brief: TenderBrief }> = ({ brief }) => (
         </div>
         <div className="min-w-0">
           <p className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 mb-2">Documents</p>
+          {brief.slack_url && (
+            <p className="mb-2"><SlackLink url={brief.slack_url} /></p>
+          )}
           {(brief.documents && brief.documents.length) ? (
             <ul className="space-y-1.5">
               {brief.documents.map((d, i) => (
@@ -155,7 +196,9 @@ const DetailPanel: React.FC<{ brief: TenderBrief }> = ({ brief }) => (
               ))}
             </ul>
           ) : (
-            <p className="text-[11px] text-slate-400 italic">No documents filed.</p>
+            <p className="text-[11px] text-slate-400 italic">
+              {brief.slack_url ? 'The files are in the Slack message.' : 'No documents filed.'}
+            </p>
           )}
         </div>
       </div>
@@ -163,6 +206,7 @@ const DetailPanel: React.FC<{ brief: TenderBrief }> = ({ brief }) => (
     <div className="flex flex-wrap gap-x-8 gap-y-2 mt-6 pt-4 border-t border-slate-200 dark:border-white/5">
       {[
         ['Category', brief.category || '-'],
+        ['Status', (brief.status || 'new').replace('-', ' ')],
         ['Published', fmtDate(brief.published)],
         ['Closing', fmtDate(brief.closing)],
         ['Reference', brief.reference || '-'],
@@ -183,6 +227,7 @@ export const Tenders: React.FC = () => {
   const [filters, setFilters] = useState<TenderFilters>(NO_TENDER_FILTERS);
   const [search, setSearch] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   // Typing should not fire a request per keystroke.
   useEffect(() => {
@@ -211,6 +256,25 @@ export const Tenders: React.FC = () => {
   }, [filters]);
 
   const set = (patch: Partial<TenderFilters>) => setFilters((f) => ({ ...f, ...patch }));
+
+  /** Status is the only thing a person owns on a brief, so it is saved the moment it is picked. */
+  const changeStatus = async (id: string, next: string) => {
+    const before = briefs;
+    setError('');
+    setSavingId(id);
+    setBriefs((bs) => bs.map((b) => (b.id === id ? { ...b, status: next } : b)));
+    try {
+      await tenderService.setStatus(id, next);
+      // A status filter is on: the row may no longer belong in this view.
+      if (filters.status) setBriefs(await tenderService.getTenders(filters));
+    } catch (e: any) {
+      setBriefs(before);
+      const detail = e?.response?.data?.detail;
+      setError(typeof detail === 'string' ? detail : 'Could not change that status. Try again.');
+    } finally {
+      setSavingId(null);
+    }
+  };
   const filtered = !!(filters.status || filters.days || filters.q);
 
   const stats = useMemo(() => {
@@ -318,8 +382,8 @@ export const Tenders: React.FC = () => {
         <div className={`glass rounded-[2rem] border border-slate-200 dark:border-white/5 shadow-2xl overflow-hidden transition-opacity ${loading ? 'opacity-50' : ''}`}>
           {/* Table, wide screens. Phone and tablet get the cards below. */}
           <div className="hidden lg:block overflow-x-auto">
-            <div className="min-w-[900px]">
-              <div className="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_92px_72px_82px_50px_82px_42px_78px_46px] gap-2 px-4 py-4 border-b border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.02]">
+            <div className="min-w-[1000px]">
+              <div className="grid grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_84px_132px_78px_46px_76px_38px_112px_46px] gap-2 px-4 py-4 border-b border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.02]">
                 {['Tender', 'Buyer', 'Reference', 'Source', 'Closing', 'Days', 'Amount', 'Fit', 'Status', 'Docs'].map((h, i) => (
                   <div
                     key={h}
@@ -333,7 +397,7 @@ export const Tenders: React.FC = () => {
                 <div key={b.id} className="border-b border-slate-200 dark:border-white/5 last:border-0">
                   <div
                     onClick={() => setOpenId(openId === b.id ? null : b.id)}
-                    className="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_92px_72px_82px_50px_82px_42px_78px_46px] gap-2 px-4 py-4 items-center hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors cursor-pointer"
+                    className="grid grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_84px_132px_78px_46px_76px_38px_112px_46px] gap-2 px-4 py-4 items-center hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors cursor-pointer"
                   >
                     <div className="flex items-start gap-2 min-w-0">
                       {openId === b.id ? <ChevronUp className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />}
@@ -351,7 +415,13 @@ export const Tenders: React.FC = () => {
                     <div className="text-center"><DaysCell closing={b.closing} /></div>
                     <p className="text-[11px] font-bold text-slate-600 dark:text-slate-300 break-words">{b.amount || '-'}</p>
                     <div className="text-center"><ScoreBadge score={b.relevance_score} reason={b.relevance_reason} /></div>
-                    <div><StatusBadge status={b.status} /></div>
+                    <div>
+                      <StatusSelect
+                        value={b.status || 'new'}
+                        busy={savingId === b.id}
+                        onChange={(next) => changeStatus(b.id, next)}
+                      />
+                    </div>
                     <div className="text-right"><DocLinks brief={b} /></div>
                   </div>
                   {openId === b.id && <DetailPanel brief={b} />}
@@ -370,7 +440,11 @@ export const Tenders: React.FC = () => {
                 </div>
                 <p className="text-[11px] font-bold text-slate-500 mb-3">{b.buyer || 'Buyer not listed'}</p>
                 <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <StatusBadge status={b.status} />
+                  <StatusSelect
+                    value={b.status || 'new'}
+                    busy={savingId === b.id}
+                    onChange={(next) => changeStatus(b.id, next)}
+                  />
                   {daysLeft(b.closing) !== null && (
                     <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
                       <DaysCell closing={b.closing} />
